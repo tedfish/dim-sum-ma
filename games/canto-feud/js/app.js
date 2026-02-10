@@ -230,7 +230,7 @@ function startRound(id, isGameStart = false) {
     // Speak the question, then start the first answer!
     // Intro Phrase first (Custom if first round of session)
     const intro = isGameStart ?
-        "Welcome back to Dim Sum Momma! Let's see your skills." :
+        "Welcome back to Dim Sum Ma! Let's see your skills." :
         getIntroPhrase();
 
     speak(intro, false, () => {
