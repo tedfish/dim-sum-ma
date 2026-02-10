@@ -271,6 +271,23 @@ function getIntroPhrase() {
     return INTRO_PHRASES[Math.floor(Math.random() * INTRO_PHRASES.length)];
 }
 
+const ENCOURAGEMENTS = [
+    "Go on!",
+    "Show me your best!",
+    "Give it a try!",
+    "Don't be shy!",
+    "You can do it!",
+    "Let's hear it!",
+    "Talk to me!",
+    "Speak up, dear!",
+    "Ready when you are!",
+    "Your turn to shine!"
+];
+
+function getRandomEncouragement() {
+    return ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+}
+
 function nextRandomRound() {
     // Filter rounds by CURRENT DIFFICULTY LEVEL
     // Also include rounds from lower levels that haven't been played? 
@@ -507,7 +524,7 @@ function activateCard(ans) {
         // Show Mic ONLY when done speaking
         if (micBtn) micBtn.classList.remove('hidden');
 
-        statusText.textContent = "Click Mic to Speak";
+        statusText.textContent = getRandomEncouragement();
     }, true);
 
     statusText.textContent = "Listen...";
@@ -534,7 +551,7 @@ function showRoundSummary() {
         "Not bad, but can be better.",
         "You earned your dim sum today.",
         "Grandmother would be... satisfied.",
-        "Keep practicing, darling.",
+        "Keep practicing, dear.",
         "Aiya, at least you tried!",
         "Better than your cousin... maybe.",
         "Your tones are improving!",
@@ -595,7 +612,7 @@ const FEEDBACK_PHRASES = {
         "Very good! Keep it up.", "Not bad, distinct and clear.",
         "I understood you perfectly.", "Solid effort! Almost native.",
         "Good energy! Tones are getting there.", "Acceptable! You can order lunch.",
-        "Nice work, darling.", "You are learning fast!",
+        "Nice work!", "You are learning fast!",
         "Respectable! I like it.", "Pretty smooth!",
         "Passable! Grandmother would smile.", "Strong effort!"
     ],
@@ -609,7 +626,7 @@ const FEEDBACK_PHRASES = {
     poor: [
         "Aiya, that was close! Don't be shy.", "Open your mouth wider!",
         "Tricky one? Listen to me again.", "Not quite! You can do better.",
-        "Don't worry, Cantonese is hard!", "Speak up, darling!",
+        "Don't worry, Cantonese is hard!", "Speak up, dear!",
         "Almost! Try focusing on the tone.", "A little bit off. You'll get it next time!",
         "Keep practicing! I believe in you.", "Listen carefully and copy me.",
         "Don't give up! Eat a bun and keep fighting."
@@ -1003,7 +1020,7 @@ function updateMicUI(listening) {
     }
 
     if (!listening) {
-        statusText.textContent = "Click Mic to Answer";
+        statusText.textContent = getRandomEncouragement();
         statusText.style.color = 'var(--text-muted)';
         statusText.style.fontWeight = 'normal';
     }
@@ -1261,7 +1278,7 @@ async function speak(text, showBubble = false, onComplete = null, useUserRate = 
         if (avatarContainer) avatarContainer.classList.remove('speaking');
         ttsActive = false;
         if (onComplete) onComplete();
-        else statusText.textContent = "Click Mic to Answer";
+        else statusText.textContent = getRandomEncouragement();
     };
 
     utter.onerror = (e) => {
@@ -2103,7 +2120,7 @@ function init() {
             if (speedSwitch.checked) {
                 speechRate = 0.7; // Slow
                 if (speedLabel) speedLabel.textContent = 'Turtle Mode 🐢';
-                speak("Turtle mode activated. Slow and steady, darling.");
+                speak("Turtle mode activated. Slow and steady, dear.");
             } else {
                 speechRate = 1.0; // Normal
                 if (speedLabel) speedLabel.textContent = 'Rabbit Mode 🐰';
