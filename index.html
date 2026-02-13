@@ -9,47 +9,51 @@
     <link rel="stylesheet" href="css/branding.css">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥟</text></svg>">
+    <link rel="stylesheet" href="css/global-nav.css">
+
 </head>
 
 <body>
     <div class="dimsum-bg-container"></div>
 
-    <div class="banquet-table-container">
-        <!-- Static Fallback -->
-        <img src="assets/banquet-table.png" class="banquet-table-bg" alt="Dim Sum Banquet Table">
+    <div class="hero-section">
+        <div class="banquet-table-container">
+            <!-- Static Fallback -->
+            <img src="assets/banquet-table.png" class="banquet-table-bg" alt="Dim Sum Banquet Table">
+            <a href="games/canto-feud/index.html#shop" class="shop-link-button">
+                <span class="shop-icon">🛒</span>
+                <span class="shop-text">Open Dim Sum Shop</span>
+            </a>
+        </div>
     </div>
 
     <header>
         <span
             style="font-size: 1.5rem; font-weight: 900; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.2em; display: block; margin-bottom: 0.5rem;">The
             Official App</span>
-        <img src="assets/logo.svg" alt="Dim Sum Ma" class="logo">
+        <img src="assets/logo.svg?v=2" alt="Dim Sum Ma" class="logo">
         <div class="subtitle">Select a game to satisfy your inner cravings</div>
     </header>
 
     <main class="game-grid">
         <!-- Canto Feud (Formerly Dim Sum Momma) -->
-        <a href="games/canto-feud/index.html" class="game-card card-dim-sum">
+        <a href="games/canto-feud/index.html" class="game-card card-dim-sum big-tile">
             <span class="badge" style="background: #a855f7;">PLAY NOW</span>
             <div class="game-icon">🎤</div>
-            <h2 class="game-title">Canto Feud</h2>
-            <p class="game-desc">The high-stakes game show where your pronunciation wins you food!</p>
+            <div class="game-content">
+                <h2 class="game-title">Canto Feud</h2>
+                <p class="game-desc">The high-stakes game show where your pronunciation wins you food!</p>
+            </div>
         </a>
 
         <!-- Panda Palace -->
-        <a href="games/panda-palace/index.html" class="game-card card-panda">
+        <a href="games/panda-palace/index.html" class="game-card card-panda big-tile">
             <span class="badge soon">SOON</span>
             <div class="game-icon">🐼</div>
-            <h2 class="game-title">Panda Palace</h2>
-            <p class="game-desc">Build and manage your own bamboo empire. Coming soon!</p>
-        </a>
-
-        <!-- Dim Sum Store -->
-        <a href="games/canto-feud/index.html#shop" class="game-card card-shop">
-            <span class="badge" style="background: #fbbf24; color: #1e1b4b;">VISIT</span>
-            <div class="game-icon">🛒</div>
-            <h2 class="game-title">Dim Sum Store</h2>
-            <p class="game-desc">Decorate your banquet, buy baskets, and spend your dumpling dollars!</p>
+            <div class="game-content">
+                <h2 class="game-title">Panda Palace</h2>
+                <p class="game-desc">Build and manage your own bamboo empire. Coming soon!</p>
+            </div>
         </a>
     </main>
 
@@ -57,6 +61,7 @@
         &copy; 2026 Dim Sum Ma Games
     </footer>
     <script type="module" src="js/home-banquet.js"></script>
+    <script type="module" src="js/global-nav.js"></script>
 </body>
 
 </html>

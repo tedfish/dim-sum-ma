@@ -1,6 +1,6 @@
 import { gameData } from './chapters.js';
 import { ITEMS, ITEM_ASSETS } from './items.js';
-import { pinyinMap, toPhoneticEnglish, comparePronunciation } from './pinyinHelper.js';
+import { pinyinMap, toPhoneticEnglish, comparePronunciation, convertToPinyin, getToneAndBase, calculateGradingMetrics } from './pinyinHelper.js';
 import { TTS_CONFIG } from './tts-config.js';
 
 // State
@@ -15,8 +15,17 @@ let recognition = null;
 let synthesis = window.speechSynthesis;
 let voices = [];
 let finalVoice = null;
+let selectedVoiceURI = 'auto'; // Default to auto
 let speechRate = 1.0; // Default: Rabbit Mode (Normal)
 let audioContext = null;
+let analyser = null;
+let dataArray = null;
+let animationId = null;
+let waveformCanvas = null;
+let waveformCtx = null;
+let waveformEnabled = false;
+let micStream = null;
+let volumeSmoothed = 0; // For visibility smoothing
 
 // DOM Elements
 const chapterNav = document.getElementById('chapter-nav');
@@ -30,17 +39,32 @@ let micBtn = document.getElementById('mic-btn');
 
 const statusText = document.getElementById('status-text');
 const liveSubtitle = document.getElementById('live-subtitle');
+const liveSubtitleText = document.getElementById('live-subtitle-text');
 const avatarMouth = document.getElementById('mouth');
 const avatarBubble = document.getElementById('avatar-bubble');
 const avatarContainer = document.querySelector('.avatar-container');
 const langSwitch = document.getElementById('lang-switch');
 const langLabel = document.getElementById('lang-label');
 const manualInput = document.getElementById('manual-input');
+const voiceSelect = document.getElementById('voice-select');
 
 // Difficulty DOM
-const diffBtns = document.querySelectorAll('.diff-btn');
-const diffDesc = document.getElementById('difficulty-desc');
-const levelDisplay = document.getElementById('current-level-display');
+const DIFF_BTNS = document.querySelectorAll('.diff-btn');
+const DIFF_DESC = document.getElementById('difficulty-desc');
+const LEVEL_DISPLAY = document.getElementById('current-level-display');
+
+// Auto Answer State
+let autoAnswerEnabled = localStorage.getItem('dimsum_auto_answer') === 'true';
+
+// Listen for global toggle
+window.addEventListener('auto-answer-changed', (e) => {
+    autoAnswerEnabled = e.detail.enabled;
+    console.log("Auto Answer Toggled:", autoAnswerEnabled);
+    if (autoAnswerEnabled && practiceTarget && !isListening) {
+        // If we toggled ON while waiting, start listening!
+        startListening();
+    }
+});
 
 const DIFFICULTY_DESCS = {
     0: "Just A Baby 👶",
@@ -62,28 +86,89 @@ const DIFFICULTY_DESCS = {
 
 function loadVoices() {
     voices = synthesis.getVoices();
+    if (voices.length === 0) return; // Wait for voices to load
 
+    // 1. Populate Dropdown
+    if (voiceSelect) {
+        voiceSelect.innerHTML = '<option value="auto">Auto (Default)</option>';
+
+        // Filter for relevant voices (Cantonese, Chinese, or English if needed?)
+        // Let's list mostly Chinese/Cantonese voices, maybe others for fun?
+        // Let's stick to Chinese/Cantonese + English (for fallback debug)
+        const relevantVoices = voices.filter(v =>
+            v.lang.startsWith('zh') ||
+            v.lang.includes('HK') ||
+            v.lang.includes('TW') ||
+            v.lang.startsWith('en') // Include English for accessibility/debug
+        ).sort((a, b) => a.lang.localeCompare(b.lang));
+
+        relevantVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.voiceURI;
+            opt.textContent = `${v.name} (${v.lang})`;
+            voiceSelect.appendChild(opt);
+        });
+
+        // Set selected value
+        voiceSelect.value = selectedVoiceURI || 'auto';
+
+        // Handler
+        voiceSelect.onchange = () => {
+            selectedVoiceURI = voiceSelect.value;
+            console.log("User selected voice:", selectedVoiceURI);
+            updateFinalVoice();
+            saveProgress();
+            speak("Testing voice. 測試語音。", false, null, true); // Test speak
+        };
+    }
+
+    updateFinalVoice();
+}
+
+function updateFinalVoice() {
+    // If specific voice selected
+    if (selectedVoiceURI && selectedVoiceURI !== 'auto') {
+        const userVoice = voices.find(v => v.voiceURI === selectedVoiceURI);
+        if (userVoice) {
+            finalVoice = userVoice;
+            console.log("Voice set to User Preference:", finalVoice.name);
+            return;
+        }
+    }
+
+    // Auto strategy
     // Strategy 1: Look for high-quality Cantonese voices (HK)
+    // STRICT FILTER: Must be HK to be considered "Cantonese" first.
     const hkVoices = voices.filter(v => v.lang === 'zh-HK' || v.lang === 'zh_HK');
 
-    // Priority: Neural/Natural -> Google -> Local/System
-    finalVoice = hkVoices.find(v => v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('natural')) ||
-        hkVoices.find(v => v.name.toLowerCase().includes('google')) ||
-        hkVoices[0];
+    if (hkVoices.length > 0) {
+        // Priority within HK:
+        // 1. "Sin-ji" (macOS high quality)
+        // 2. "Neural" / "Natural" (Cloud/Edge)
+        // 3. "Google" (Chrome)
+        // 4. Any other HK
+        finalVoice = hkVoices.find(v => v.name.includes('Sin-ji')) ||
+            hkVoices.find(v => v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('natural')) ||
+            hkVoices.find(v => v.name.toLowerCase().includes('google')) ||
+            hkVoices[0];
+    } else {
+        // Fallback only if NO HK voice exists
+        console.warn("No zh-HK voice found! Falling back to other Chinese dialects.");
 
-    // Strategy 2: Fallback to Taiwan (TW) if HK is missing
-    if (!finalVoice) {
+        // Strategy 2: Fallback to Taiwan (TW) if HK is missing
         const twVoices = voices.filter(v => v.lang.startsWith('zh-TW'));
         finalVoice = twVoices.find(v => v.name.toLowerCase().includes('google')) || twVoices[0];
+
+        // Strategy 3: Fallback to any Chinese
+        if (!finalVoice) {
+            finalVoice = voices.find(v => v.lang.startsWith('zh'));
+        }
     }
 
-    // Strategy 3: Fallback to any Chinese
-    if (!finalVoice) {
-        finalVoice = voices.find(v => v.lang.startsWith('zh'));
-    }
+
 
     if (finalVoice) {
-        console.log("Optimal Cantonese Voice selected:", finalVoice.name, finalVoice.lang);
+        console.log("Optimal Cantonese Voice selected (Auto):", finalVoice.name, finalVoice.lang);
     } else {
         console.warn("No suitable Cantonese voice found on this device.");
     }
@@ -238,7 +323,7 @@ function startRound(id, isGameStart = false) {
         speak(currentRound.question.canto, true, () => {
             // Then activate the board (Faster: 500 -> 200)
             setTimeout(activateNextAnswer, 300);
-        }, true);
+        }, false);
     });
 
     renderBoard();
@@ -323,18 +408,51 @@ function nextRandomRound() {
 }
 
 // History & Score
-function addToHistory(text, score, analysis) {
+function addToHistory(answer, metrics) {
+    const score = metrics.finalScore;
+    const timestamp = Date.now();
+
+    // 1. Update History Data
+    const questionKey = `${currentRound.id}_ans_${answer.id}`;
+    if (!questionHistory[questionKey]) questionHistory[questionKey] = [];
+
+    questionHistory[questionKey].push({
+        timestamp: timestamp,
+        score: score,
+        metrics: metrics,
+        grade: score
+    });
+
+    // 2. Update Scores
+    currentRoundScore += score;
     totalScore += score;
+
+    // Bonus for exceptional performance
+    if (score >= 95) {
+        totalScore += 10;
+    }
+
+    // 3. UI Updates
     scoreDisplays.forEach(el => {
-        // Simple count-up animation
         const start = parseInt(el.textContent) || 0;
         animateValue(el, start, totalScore, 1000);
     });
 
-    // SAVE PROGRESS!
+    if (roundScoreDisplay) {
+        roundScoreDisplay.textContent = currentRoundScore;
+        roundScoreDisplay.classList.add('pulse');
+        setTimeout(() => roundScoreDisplay.classList.remove('pulse'), 500);
+    }
+
+    // 4. Level Up Logic
+    // const newLevel = Math.min(10, Math.floor(totalScore / 400));
+    // Level up logic can stay simple or call external if needed
+
+    // 5. Save & Sound
     saveProgress();
 
-    // No longer adding list items to history window (removed)
+    // Check if playDing exists, else ignore
+    if (typeof playDing === 'function') playDing();
 }
 
 function animateValue(obj, start, end, duration) {
@@ -397,77 +515,28 @@ function showWinScreen() {
     speak("Congratulations! You are officially fluent.");
 }
 
+// Redefined DOM Elements for Single View
+const activeStage = document.getElementById('active-stage');
+const completedGallery = document.getElementById('completed-gallery');
+
 function renderBoard() {
-    gameBoard.innerHTML = '';
+    activeStage.innerHTML = '<div class="empty-stage-msg">Get Ready!</div>';
+    completedGallery.innerHTML = '';
 
-    // SHUFFLE answers for display (Random Layout)
-    const shuffledAnswers = [...currentRound.answers].sort(() => Math.random() - 0.5);
+    // Create Card Elements (Memory only first? Or append to Gallery hidden?)
+    // Strategy: We will create the card elements when needed or pre-create them?
+    // Let's pre-create them in memory or a hidden state to manage them easier.
 
-    // Set count for CSS Layout
-    gameBoard.setAttribute('data-card-count', shuffledAnswers.length);
+    // Actually, let's just render the COMPLETED ones in gallery if any (none at start)
+    // And render the ACTIVE one in stage.
 
-    shuffledAnswers.forEach((ans, index) => {
-        const slot = document.createElement('div');
-        // ... (rest is same)
-        slot.className = 'card-slot';
+    // We need to know which is active. 
+    // In `startRound`, we called `activateNextAnswer`.
 
-        // Inner Card - NOW VISIBLE by default, but "inactive"
-        const card = document.createElement('div');
-        card.className = 'answer-card visible-answer';
-        card.id = `ans-${ans.id}`;
-        card.setAttribute('data-index', index + 1);
-
-        // Click to practice
-        card.style.cursor = 'pointer';
-        card.onclick = (e) => {
-            // Don't activate card if clicking progress button
-            if (e.target.closest('.progress-btn')) {
-                return;
-            }
-            activateCard(ans);
-        };
-
-        if (revealedAnswers.includes(ans.id)) {
-            card.classList.add('completed');
-        }
-
-        // Content
-        const textGroup = document.createElement('div');
-        textGroup.className = 'text-group';
-
-        const accentedPinyin = getAccentedPinyin(ans.canto, ans.pinyin);
-        const phoneticEnglish = toPhoneticEnglish(ans.pinyin);
-
-        textGroup.innerHTML = `
-            <div class="answer-row chinese">${ans.canto}</div>
-            <div class="answer-row pinyin">${accentedPinyin} / ${phoneticEnglish}</div>
-            <div class="answer-row english">${ans.english}</div>
-        `;
-
-        const scoreDiv = document.createElement('div');
-        scoreDiv.className = 'answer-score';
-        // Hide score initially (or show placement holder)
-        scoreDiv.textContent = "--";
-        scoreDiv.id = `score-${ans.id}`; // Add ID for easier update
-
-        card.appendChild(textGroup);
-        card.appendChild(scoreDiv);
-
-        // Add progress button if there's history for this question
-        const questionKey = `${currentRound.id}_ans_${ans.id}`;
-        if (questionHistory[questionKey] && questionHistory[questionKey].length > 0) {
-            const progressBtn = document.createElement('button');
-            progressBtn.className = 'progress-btn';
-            progressBtn.innerHTML = '📊';
-            progressBtn.onclick = (e) => {
-                e.stopPropagation();
-                showScoreHistory(ans, questionHistory[questionKey]);
-            };
-            card.appendChild(progressBtn);
-        }
-
-        slot.appendChild(card);
-        gameBoard.appendChild(slot);
+    // So renderBoard just clears the view basically.
+    revealedAnswers.forEach(id => {
+        // If we reloading state (future proof), render them in gallery.
+        // For now, new round = empty.
     });
 }
 
@@ -484,24 +553,19 @@ let transcriptBuffer = ""; // Restoring legacy name if used elsewhere
 let tigerMomMode = false; // State for Tiger Mom Mode
 
 function activateNextAnswer() {
-    // Find the NEXT available card in the DOM sequence (visual order)
-    const allCards = Array.from(document.querySelectorAll('.answer-card'));
-    const nextCardEl = allCards.find(el =>
-        !el.classList.contains('completed') &&
-        !el.classList.contains('active-practice')
-    );
+    // Find the NEXT available card from DATA, not DOM
+    // We want a random unrevealed answer? Or sequential?
+    // Let's go sequential for now, or random from unrevealed.
+    // Random is more fun for "Feud".
 
-    if (nextCardEl) {
-        const id = nextCardEl.id.replace('ans-', '');
-        const ans = currentRound.answers.find(a => a.id == id);
-        if (ans) activateCard(ans);
+    const unrevealed = currentRound.answers.filter(a => !revealedAnswers.includes(a.id));
+
+    if (unrevealed.length > 0) {
+        // Pick random one
+        const nextAns = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        activateCard(nextAns);
     } else {
         // Round Complete
-        // Round Complete
-        // Auto-advance or wait for sidebar selection?
-        // For now, we removed the button, so maybe just say "Great job."
-        // For now, we removed the button, so maybe just say "Great job."
-        // speak("Round complete! Great job everyone. Check the menu for more.");
         showRoundSummary();
     }
 }
@@ -509,15 +573,54 @@ function activateNextAnswer() {
 function activateCard(ans) {
     if (revealedAnswers.includes(ans.id)) return;
 
-    document.querySelectorAll('.answer-card').forEach(el => el.classList.remove('active-practice'));
-    const card = document.getElementById(`ans-${ans.id}`);
+    // 1. Create Card DOM
+    activeStage.innerHTML = ''; // Clear stage
 
-    card.classList.add('active-practice');
+    const card = document.createElement('div');
+    card.className = 'answer-card active';
+    card.id = `ans-${ans.id}`;
+
+    // Content
+    const accentedPinyin = getAccentedPinyin(ans.canto, ans.pinyin);
+    const phoneticEnglish = toPhoneticEnglish(ans.pinyin);
+
+    card.innerHTML = `
+        <div class="text-group">
+            <div class="answer-row chinese">${ans.canto}</div>
+            <div class="answer-row pinyin">${accentedPinyin} / ${phoneticEnglish}</div>
+            <div class="answer-row english">${ans.english}</div>
+        </div>
+        <div class="card-score-container" id="score-${ans.id}">
+            <div class="main-score">--</div>
+        </div>
+    `;
+
+    // Add History Button if needed
+    const questionKey = `${currentRound.id}_ans_${ans.id}`;
+    if (questionHistory[questionKey] && questionHistory[questionKey].length > 0) {
+        const progressBtn = document.createElement('button');
+        progressBtn.className = 'progress-btn';
+        progressBtn.innerHTML = '📊';
+        progressBtn.onclick = (e) => {
+            e.stopPropagation();
+            showScoreHistory(ans, questionHistory[questionKey]);
+        };
+        card.appendChild(progressBtn);
+    }
+
+    activeStage.appendChild(card);
+
+    // 2. Set State
+    practiceTarget = ans;
+
+    // Clear speech bubble for new question
+    if (liveSubtitleText) {
+        liveSubtitleText.innerHTML = "";
+        liveSubtitle.classList.remove('has-text', 'wave-active');
+    }
 
     // Hide Mic initially (while speaking)
     if (micBtn) micBtn.classList.add('hidden');
-
-    practiceTarget = ans;
 
     // Speak it - USE USER RATE
     speak(ans.canto, false, () => {
@@ -525,6 +628,13 @@ function activateCard(ans) {
         if (micBtn) micBtn.classList.remove('hidden');
 
         statusText.textContent = getRandomEncouragement();
+
+        // Auto Answer Logic
+        if (autoAnswerEnabled) {
+            setTimeout(() => {
+                startListening();
+            }, 500); // Small buffer after speaking
+        }
     }, true);
 
     statusText.textContent = "Listen...";
@@ -681,6 +791,19 @@ function getFeedback(wordScore, toneScore) {
     return feedback;
 }
 
+const DIGIT_MAP = {
+    '0': '零', '1': '一', '2': '二', '3': '三', '4': '四',
+    '5': '五', '6': '六', '7': '七', '8': '八', '9': '九', '10': '十'
+};
+
+function normalizeInput(text) {
+    if (!text) return text;
+    // Replace digits with Chinese characters
+    return text.toString().replace(/\d+/g, (match) => {
+        return DIGIT_MAP[match] || match;
+    });
+}
+
 function handleInput(text) {
     if (!practiceTarget) return;
 
@@ -690,164 +813,112 @@ function handleInput(text) {
     const lowerText = text.toLowerCase();
 
     // --- GRANULAR SCORING ENGINE ---
-    let wordAccuracy = 0;
-    let toneAccuracy = 0;
-
-    const targetCanto = practiceTarget.canto;
     const isCantoMode = recognition.lang !== 'en-US';
 
-    if (!isCantoMode) {
-        // English Mode - word accuracy only, tone is 100% (not applicable)
-        const targetEnglish = practiceTarget.english.toLowerCase();
-        if (lowerText.includes(targetEnglish) || targetEnglish.includes(lowerText)) {
-            wordAccuracy = 95 + Math.floor(Math.random() * 6);
-        } else {
-            const targetWords = targetEnglish.split(' ');
-            let wordHits = 0;
-            targetWords.forEach(w => {
-                if (w.length > 1 && lowerText.includes(w)) wordHits++;
-            });
-            wordAccuracy = (wordHits / targetWords.length) * 100;
-        }
-        toneAccuracy = 100;
-    } else {
-        // Cantonese Mode
-        let charMatches = 0;
-        let toneMatches = 0;
-
-        // Match characters and check pronunciation
-        for (let char of targetCanto) {
-            if (text.includes(char)) {
-                charMatches++;
-                toneMatches++;
-            } else {
-                let syllableFound = false;
-                let toneFound = false;
-                for (let inputChar of text) {
-                    const comp = comparePronunciation(char, inputChar);
-                    if (comp.syllableMatch) {
-                        syllableFound = true;
-                        if (comp.toneMatch) toneFound = true;
-                    }
-                }
-                if (syllableFound) charMatches += 0.8;
-                if (toneFound) toneMatches += 1;
-            }
-        }
-
-        wordAccuracy = (charMatches / targetCanto.length) * 100;
-        toneAccuracy = (toneMatches / targetCanto.length) * 100;
-
-        // Add minimal jitter
-        wordAccuracy += Math.floor(Math.random() * 5);
-        toneAccuracy += Math.floor(Math.random() * 5);
+    // Convert input to Traditional Chinese if possible
+    let processedText = normalizeInput(text); // Normalize digits first
+    if (converter) {
+        processedText = converter(processedText);
     }
 
-    // Clamp
-    wordAccuracy = Math.min(100, Math.max(0, Math.floor(wordAccuracy)));
-    toneAccuracy = Math.min(100, Math.max(0, Math.floor(toneAccuracy)));
+    // Calculate Metrics
+    const metrics = calculateGradingMetrics(practiceTarget.canto, processedText, 0.85);
 
-    const finalScore = Math.floor((wordAccuracy + toneAccuracy) / 2);
+    // Restore Rich Feedback (Tiger Mom)
+    metrics.feedback = getFeedback(metrics.syllableScore, metrics.toneScore);
 
-    // Get Varied Feedback
-    const feedback = getFeedback(wordAccuracy, toneAccuracy);
-
+    // Generate Pinyin Tokens for User Input
+    const userTokens = convertToPinyin(processedText);
     // Speak feedback, then trigger success
     const target = practiceTarget;
-    speak(`${finalScore} points. ${feedback}`, false, () => {
-        success(target, wordAccuracy, toneAccuracy, text);
+
+    // Always show what was heard in status, with Pinyin
+    const userPinyinStr = userTokens.map(t => t.pinyin).join(' ');
+    if (liveSubtitleText) {
+        liveSubtitleText.innerHTML = `<span style="color:#a78bfa">${processedText}</span> <br> <span style="font-size:0.8em; color:#ddd">${userPinyinStr}</span>`;
+        liveSubtitle.classList.add('has-text');
+    }
+
+    speak(`${metrics.finalScore} points. ${metrics.feedback}`, false, () => {
+        success(target, metrics, processedText, userTokens);
     });
 
     practiceTarget = null;
 }
 
-function success(answer, wordScore, toneScore, spokenText = "") {
+function success(answer, metrics, spokenText = "", userTokens = []) {
+    const wordScore = metrics.syllableScore || 0;
+    const toneScore = metrics.toneScore || 0;
+
     revealedAnswers.push(answer.id);
+    addToHistory(answer, metrics); // Add score to total
+
+    // Find card in Stage
     const card = document.getElementById(`ans-${answer.id}`);
+
     if (card) {
-        card.classList.remove('active-practice');
+        // Animation: Success State
         card.classList.add('completed');
 
-        // Hide mic after success
+        // Hide mic
         if (micBtn) micBtn.classList.add('hidden');
 
         // UPDATE THE CARD SCORE TO SHOW THE GRADE
         const scoreEl = document.getElementById(`score-${answer.id}`);
         if (scoreEl) {
+            const metricsList = [
+                { score: metrics.syllableScore, color: '#4ade80', label: 'Syl' },
+                { score: metrics.toneScore, color: '#fbbf24', label: 'Tone' },
+                { score: metrics.confidenceScore, color: '#a78bfa', label: 'Conf' },
+                { score: metrics.spiritScore, color: '#f472b6', label: 'Spt' }
+            ].map(item => `
+                <div class="metric-row" title="${item.label}: ${item.score}%">
+                    <span class="metric-label">${item.label[0]}</span>
+                    <div class="metric-bar-bg">
+                        <div class="metric-bar-fill" style="width: ${item.score}%; background-color: ${item.color};"></div>
+                    </div>
+                </div>
+            `).join('');
+
             scoreEl.innerHTML = `
-                <div class="split-score">
-                    <div>W: <span class="score-val">${wordScore}</span></div>
-                    <div>T: <span class="score-val">${toneScore}</span></div>
+                <div class="card-score-compact">
+                    <div class="main-score-circle">${metrics.finalScore}</div>
+                    <div class="metrics-grid">
+                        ${metricsList}
+                    </div>
                 </div>
             `;
         }
 
-        // SHOW SPOKEN TEXT
-        if (spokenText) {
+        // SHOW SPOKEN TEXT WITH PINYIN - ELEGANT UI
+        if (spokenText && userTokens.length > 0) {
             const textGroup = card.querySelector('.text-group');
             if (textGroup) {
-                const spokenEl = document.createElement('div');
-                spokenEl.className = 'user-spoken-text';
-                spokenEl.textContent = `"${spokenText}"`;
-                textGroup.appendChild(spokenEl);
+                const feedbackContainer = document.createElement('div');
+                feedbackContainer.className = 'user-feedback-container';
+
+                userTokens.forEach(token => {
+                    const span = document.createElement('span');
+                    span.className = 'feedback-token';
+                    // Re-adding pinyin for "phonetic" version, styling will subdue it
+                    span.innerHTML = `<span class="u-char">${token.char}</span><span class="u-pinyin">${token.pinyin}</span>`;
+                    feedbackContainer.appendChild(span);
+                });
+                card.appendChild(feedbackContainer);
             }
         }
+
+        // Move to Gallery after delay
+        setTimeout(() => {
+            // Move DOM element to Gallery
+            completedGallery.prepend(card); // Add to start of gallery
+
+            // Trigger Next Question
+            setTimeout(activateNextAnswer, 500);
+        }, 2000); // Wait 2s to see the results
     }
-
-    const avgScore = Math.floor((wordScore + toneScore) / 2);
-
-    // Track question attempt in history
-    const questionKey = `${currentRound.id}_ans_${answer.id}`;
-    if (!questionHistory[questionKey]) {
-        questionHistory[questionKey] = [];
-    }
-    questionHistory[questionKey].push({
-        timestamp: Date.now(),
-        score: avgScore,
-        wordScore: wordScore,
-        toneScore: toneScore,
-        userInput: spokenText,
-        grade: avgScore
-    });
-
-    // Use avgScore directly as points
-    const earnedPoints = avgScore;
-
-    totalScore += earnedPoints;
-    currentRoundScore += earnedPoints;
-
-    // Bonus for perfect score
-    if (avgScore >= 95) totalScore += 10;
-
-    saveProgress();
-
-    // Update round score display with pulse animation
-    if (roundScoreDisplay) {
-        roundScoreDisplay.textContent = currentRoundScore;
-        roundScoreDisplay.classList.add('pulse');
-        setTimeout(() => roundScoreDisplay.classList.remove('pulse'), 500);
-    }
-
-    // Animate the score update
-    const currentVal = parseInt(scoreDisplays[0]?.innerText.replace(/[^0-9]/g, '') || '0');
-    animateScore(scoreDisplays, currentVal, totalScore, 1000);
-
-    // CHECK FOR LEVEL UP!
-    const newLevel = Math.min(10, Math.floor(totalScore / 400));
-    if (newLevel > currentLevel) {
-        currentLevel = newLevel;
-        updateLevelUI();
-        speak(`Level Up! You are now level ${currentLevel}. ${DIFFICULTY_DESCS[currentLevel]}`);
-        saveProgress();
-    }
-
-    playDing();
-
-    // Auto Advance after a delay to celebrate
-    setTimeout(() => {
-        activateNextAnswer();
-    }, 2000);
 }
+
 
 function animateScore(elements, start, end, duration) {
     if (!elements || elements.length === 0) return;
@@ -955,7 +1026,14 @@ function setupSpeechRecognition() {
                 }
 
                 // Visual feedback
-                liveSubtitle.textContent = transcriptBuffer;
+                if (liveSubtitleText) {
+                    liveSubtitleText.textContent = transcriptBuffer;
+                    if (transcriptBuffer.trim().length > 0) {
+                        liveSubtitle.classList.add('has-text');
+                    } else {
+                        liveSubtitle.classList.remove('has-text');
+                    }
+                }
                 statusText.textContent = "Listening...";
                 statusText.style.color = '#22d3ee';
 
@@ -1056,14 +1134,18 @@ function startListening() {
         // Clear old silence timer just in case
         if (silenceTimer) clearTimeout(silenceTimer);
 
-        updateMicUI(true); // Visuals
+        // 2. Set UI to "Starting" state
+        isListening = true;
+        updateMicUI(true);
+
+        if (waveformEnabled) {
+            startWaveform();
+        }
 
         try {
             recognition.start();
         } catch (e) {
-            console.log("Start error:", e);
-            isListening = false;
-            updateMicUI(false);
+            console.error("Recognition Start Error:", e);
         }
     }, 300);
 }
@@ -1073,24 +1155,151 @@ function stopListening() {
     if (!isListening) return;
 
     isListening = false;
+    updateMicUI(false);
+    stopWaveform();
 
     if (silenceTimer) clearTimeout(silenceTimer);
-
-    // updateMicUI(false); // Do not reset UI immediately, let onend handle it
-
-    // Visual feedback for stop
-    const btn = document.getElementById('mic-btn');
-    if (btn) btn.classList.remove('listening');
 
     if (recognition) {
         try {
             recognition.stop();
         } catch (e) { }
-        // playBong(400, 0.1); // Only play start bong? Or end bong too? User asked for "bong to indicate listening".
-        // Let's keep end sound distinctive or silent. The user said "bong to indicate listening", implied start.
-        // Let's create a different subtle sound for stop/processing.
-        playDing();
     }
+
+    // Let's create a different subtle sound for stop/processing.
+    playDing();
+}
+
+// Waveform Logic
+function startWaveform() {
+    if (!waveformEnabled) return;
+
+    waveformCanvas = document.getElementById('waveform-canvas');
+    if (!waveformCanvas) return;
+
+    // Do NOT add wave-active here, we will add it in drawWaveform based on volume
+
+    waveformCanvas.classList.remove('hidden');
+    waveformCtx = waveformCanvas.getContext('2d');
+
+    if (!audioContext) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContext();
+    }
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            micStream = stream;
+            const source = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            drawWaveform();
+        })
+        .catch(err => {
+            console.error("Microphone access denied for waveform:", err);
+            waveformCanvas.classList.add('hidden');
+        });
+}
+
+function stopWaveform() {
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+    }
+
+    // Remove wave-active class
+    if (liveSubtitle) {
+        liveSubtitle.classList.remove('wave-active');
+        // Do NOT clear text here if we want to show processing state, 
+        // but user says "don't show empty bubble", so maybe we clear it.
+        // Actually, onend handles the final transcript.
+    }
+
+    const canvas = document.getElementById('waveform-canvas');
+    if (canvas) canvas.classList.add('hidden');
+}
+
+function drawWaveform() {
+    if (!analyser || !waveformCtx || !waveformCanvas) return;
+
+    animationId = requestAnimationFrame(drawWaveform);
+
+    // Use Frequency Data for more "prominent" and "cute" movement
+    analyser.getByteFrequencyData(dataArray);
+
+    const width = waveformCanvas.width;
+    const height = waveformCanvas.height;
+
+    // 1. Calculate Volume (Average Frequency)
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i];
+    }
+    const averageVolume = sum / dataArray.length;
+
+    // 2. Control Bubble Visibility based on Volume with Smoothing
+    // Threshold: 10 (very quiet) to 20 (normal speaking)
+    const threshold = 12;
+    const hasText = liveSubtitleText && liveSubtitleText.textContent.trim().length > 0;
+
+    // Decay/Smoothing: Keep it high if loud, slowly decrease
+    if (averageVolume > threshold) {
+        volumeSmoothed = 0.8 * volumeSmoothed + 0.2 * averageVolume;
+    } else {
+        volumeSmoothed *= 0.85; // Faster decay for better responsiveness
+    }
+
+    if (volumeSmoothed > 8 || hasText) {
+        liveSubtitle.classList.add('wave-active');
+    } else {
+        liveSubtitle.classList.remove('wave-active');
+    }
+
+    waveformCtx.clearRect(0, 0, width, height);
+
+    // Cute Branded Waveform Style: "Dim Sum Aura / Steam"
+    const barCount = 12; // Fewer bars = chunkier/cuter
+    const barSpacing = 6;
+    const barWidth = (width / barCount) - barSpacing;
+    const step = Math.floor(dataArray.length / 2 / barCount);
+
+    for (let i = 0; i < barCount; i++) {
+        // Average frequency in this chunk
+        let chunkSum = 0;
+        for (let j = 0; j < step; j++) {
+            chunkSum += dataArray[i * step + j];
+        }
+        const val = chunkSum / step;
+        const barHeight = Math.max(6, (val / 255) * height * 0.9);
+
+        // Colors: Gold to Pink (Branded)
+        const mix = i / barCount;
+        const color = `rgba(${Math.floor(251 * (1 - mix) + 244 * mix)}, ${Math.floor(191 * (1 - mix) + 114 * mix)}, ${Math.floor(36 * (1 - mix) + 182 * mix)}, 0.85)`;
+
+        waveformCtx.fillStyle = color;
+
+        // Draw Symmetrical Rounded Bars
+        const centerX = i * (barWidth + barSpacing) + barSpacing / 2;
+        const centerY = height / 2;
+
+        waveformCtx.beginPath();
+        waveformCtx.roundRect(centerX, centerY - barHeight / 2, barWidth, barHeight, 12);
+        waveformCtx.fill();
+
+        // Pulsing Glow
+        waveformCtx.shadowBlur = val / 8;
+        waveformCtx.shadowColor = color;
+    }
+    waveformCtx.shadowBlur = 0;
 }
 
 
@@ -1254,6 +1463,10 @@ async function speak(text, showBubble = false, onComplete = null, useUserRate = 
     }
 
     const utter = new SpeechSynthesisUtterance(text);
+
+    // CRITICAL FIX: Cancel previous speech to prevent queue backup and lag
+    synthesis.cancel();
+
     if (finalVoice) {
         utter.voice = finalVoice;
         utter.rate = useUserRate ? speechRate : 1.0;
@@ -2037,7 +2250,9 @@ function saveProgress() {
         placedItems,
         currentLevel, // Save level
         speechRate, // Save speech rate preference
-        questionHistory // Save question attempt history
+        selectedVoiceURI, // Save voice preference
+        questionHistory, // Save question attempt history
+        waveformEnabled // Save waveform preference
     };
     localStorage.setItem('dimSumData', JSON.stringify(data));
 }
@@ -2054,7 +2269,9 @@ function loadProgress() {
             placedItems = data.placedItems || [];
             currentLevel = (data.currentLevel !== undefined) ? data.currentLevel : 0; // Load level
             speechRate = (data.speechRate !== undefined) ? data.speechRate : 1.0; // Load rate
+            selectedVoiceURI = data.selectedVoiceURI || 'auto'; // Load voice
             questionHistory = data.questionHistory || {}; // Load question history
+            waveformEnabled = data.waveformEnabled || false; // Load waveform preference
             return true;
         } catch (e) {
             console.error("Save Load Error", e);
@@ -2099,8 +2316,8 @@ function init() {
         scoreDisplays.forEach(el => el.textContent = totalScore);
     }
     // Update level display
-    if (levelDisplay) {
-        levelDisplay.textContent = currentLevel;
+    if (LEVEL_DISPLAY) {
+        LEVEL_DISPLAY.textContent = currentLevel;
     }
 
     // Home Button logic
@@ -2138,13 +2355,29 @@ function init() {
             tigerMomMode = tigerSwitch.checked;
             if (tigerMomMode) {
                 if (tigerLabel) tigerLabel.textContent = 'Tiger Mode 🐯';
-                speak("Aiya. Finally. Now we play seriously.", false, null, true);
+                speak("Aiya. Finally. Now we play seriously.", false, null, false);
             } else {
                 if (tigerLabel) tigerLabel.textContent = 'Tiger Mom 🐯';
-                speak("Okay, back to nice mode.", false, null, true);
+                speak("Okay, back to nice mode.", false, null, false);
             }
         };
     }
+
+    // Waveform Toggle Logic
+    const waveformSwitch = document.getElementById('waveform-switch');
+    if (waveformSwitch) {
+        waveformSwitch.checked = waveformEnabled;
+        waveformSwitch.onchange = () => {
+            waveformEnabled = waveformSwitch.checked;
+            saveProgress();
+            if (waveformEnabled) {
+                speak("Waveform visualizer enabled! 🌊");
+            } else {
+                stopWaveform();
+            }
+        };
+    }
+
     if (homeBtn) {
         homeBtn.onclick = () => {
             const startScreen = document.getElementById('start-screen');
@@ -2290,10 +2523,10 @@ function init() {
     }
 
     // Difficulty Button Listeners
-    if (diffBtns) {
-        diffBtns.forEach(btn => {
+    if (DIFF_BTNS) {
+        DIFF_BTNS.forEach(btn => {
             btn.addEventListener('click', () => {
-                diffBtns.forEach(b => b.classList.remove('active'));
+                DIFF_BTNS.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 const level = parseInt(btn.getAttribute('data-level'));
                 updateStartScreenDesc(level);
@@ -2313,19 +2546,25 @@ function init() {
             }, 100);
         });
     }, 4000 + Math.random() * 2000); // Random blink every 4-6s
+
+    // Attach View Progress Listener
+    const historyBtn = document.getElementById('view-history-btn');
+    if (historyBtn) {
+        historyBtn.onclick = showProgressHistoryList;
+    }
 }
 
 function updateLevelUI() {
-    if (levelDisplay) {
-        levelDisplay.textContent = currentLevel;
-        levelDisplay.classList.add('pop');
-        setTimeout(() => levelDisplay.classList.remove('pop'), 500);
+    if (LEVEL_DISPLAY) {
+        LEVEL_DISPLAY.textContent = currentLevel;
+        LEVEL_DISPLAY.classList.add('pop');
+        setTimeout(() => LEVEL_DISPLAY.classList.remove('pop'), 500);
     }
 }
 
 function updateStartScreenDesc(level) {
-    if (diffDesc) {
-        diffDesc.textContent = DIFFICULTY_DESCS[level];
+    if (DIFF_DESC) {
+        DIFF_DESC.textContent = DIFFICULTY_DESCS[level];
     }
 }
 
@@ -2383,7 +2622,8 @@ function showScoreHistory(answer, history) {
 
     // Display statistics
     const stats = calculateStats(history);
-    displayStats(statsContainer, stats);
+    const latestItem = history.length > 0 ? history[history.length - 1] : null;
+    displayStats(statsContainer, stats, latestItem);
 
     // Show modal
     modal.classList.remove('hidden');
@@ -2516,8 +2756,8 @@ function calculateStats(history) {
     };
 }
 
-function displayStats(container, stats) {
-    container.innerHTML = `
+function displayStats(container, stats, latestHistoryItem) {
+    let html = `
         <div class="stat-card">
             <div class="stat-label">Attempts</div>
             <div class="stat-value">${stats.attempts}</div>
@@ -2539,48 +2779,117 @@ function displayStats(container, stats) {
             <div class="stat-value ${stats.improvement > 0 ? 'positive' : stats.improvement < 0 ? 'negative' : ''}">${stats.improvement > 0 ? '+' : ''}${stats.improvement}</div>
         </div>
     `;
+
+    // Add Breakdown if available from the latest item
+    if (latestHistoryItem && latestHistoryItem.metrics) {
+        const m = latestHistoryItem.metrics;
+        html += `
+            <div class="stat-breakdown" style="grid-column: span 3; margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; text-align: left;">
+                <h4 style="margin: 0 0 0.8rem 0; color: #fbbf24; font-size: 0.95rem; font-weight: 600;">Latest Grade Analysis</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.9rem;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color: #cbd5e1;">Syllables (字準)</span>
+                        <span style="color: ${getScoreColor(m.syllableScore)}; font-weight:bold;">${m.syllableScore}%</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color: #cbd5e1;">Tones (音準)</span>
+                        <span style="color: ${getScoreColor(m.toneScore)}; font-weight:bold;">${m.toneScore}%</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color: #cbd5e1;">Completeness</span>
+                        <span style="color: ${getScoreColor(m.completenessScore)}; font-weight:bold;">${m.completenessScore}%</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="color: #cbd5e1;">Spirit (氣勢)</span>
+                        <span style="color: ${getScoreColor(m.spiritScore)}; font-weight:bold;">${m.spiritScore}%</span>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; margin-top: 1rem; font-style: italic; color: #e2e8f0; border-left: 3px solid #fbbf24;">
+                    "${m.feedback}"
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function getScoreColor(score) {
+    if (score >= 90) return '#4ade80'; // Green
+    if (score >= 70) return '#fbbf24'; // Yellow
+    if (score >= 50) return '#f97316'; // Orange
+    return '#ef4444'; // Red
 }
 
 // Show progress history list for current round
 function showProgressHistoryList() {
+    console.log("showProgressHistoryList called");
     const modal = document.getElementById('score-history-modal');
     const titleEl = document.getElementById('history-title');
     const canvas = document.getElementById('progression-chart');
     const statsContainer = document.getElementById('history-stats');
 
-    if (!modal || !statsContainer) return;
+    if (!modal || !statsContainer) {
+        console.error("Missing modal elements", { modal, statsContainer });
+        return;
+    }
 
     // Hide canvas, show list instead
     if (canvas) canvas.style.display = 'none';
 
     titleEl.textContent = 'Question Progress History';
+    statsContainer.innerHTML = ''; // Clear existing
 
-    // Build list of questions with history
-    let listHTML = '<div class="history-list">';
+    const listContainer = document.createElement('div');
+    listContainer.className = 'history-list';
+
+    // Debug current round
+    if (!currentRound) {
+        console.error("Current round is undefined");
+        return;
+    }
+
+    let hasHistory = false;
     currentRound.answers.forEach(ans => {
         const questionKey = `${currentRound.id}_ans_${ans.id}`;
         const history = questionHistory[questionKey];
 
         if (history && history.length > 0) {
+            hasHistory = true;
             const latest = history[history.length - 1].score;
             const attempts = history.length;
-            listHTML += `
-                <button class="history-list-item" onclick="showScoreHistory({canto: '${ans.canto}', pinyin: '${ans.pinyin}', english: '${ans.english}'}, questionHistory['${questionKey}'])">
-                    <div class="history-item-text">
-                        <div class="history-item-chinese">${ans.canto}</div>
-                        <div class="history-item-english">${ans.english}</div>
-                    </div>
-                    <div class="history-item-stats">
-                        <div class="history-item-score">${latest}</div>
-                        <div class="history-item-attempts">${attempts} attempt${attempts > 1 ? 's' : ''}</div>
-                    </div>
-                </button>
+
+            const btn = document.createElement('button');
+            btn.className = 'history-list-item';
+
+            btn.innerHTML = `
+                <div class="history-item-text">
+                    <div class="history-item-chinese">${ans.canto}</div>
+                    <div class="history-item-english">${ans.english}</div>
+                </div>
+                <div class="history-item-stats">
+                    <div class="history-item-score">${latest}</div>
+                    <div class="history-item-attempts">${attempts} attempt${attempts > 1 ? 's' : ''}</div>
+                </div>
             `;
+
+            // Attach listener directly via closure
+            btn.onclick = () => {
+                showScoreHistory(ans, history);
+            };
+
+            listContainer.appendChild(btn);
         }
     });
-    listHTML += '</div>';
 
-    statsContainer.innerHTML = listHTML;
+    if (!hasHistory) {
+        statsContainer.innerHTML = '<p style="text-align:center; padding: 2rem; color: #cbd5e1;">No attempts recorded for this round yet.</p>';
+    } else {
+        statsContainer.appendChild(listContainer);
+    }
+
     modal.classList.remove('hidden');
 
     const closeBtn = document.getElementById('close-history-modal');
@@ -2593,4 +2902,14 @@ function showProgressHistoryList() {
             modal.classList.add('hidden');
         }
     };
+}
+
+// Attach global listener for the View Progress button
+// We'll also call this from init() just in case, but keeping it here for module load
+const viewHistoryBtn = document.getElementById('view-history-btn');
+if (viewHistoryBtn) {
+    console.log("Attaching listener to view-history-btn");
+    viewHistoryBtn.onclick = showProgressHistoryList;
+} else {
+    console.warn("view-history-btn not found at module load time");
 }

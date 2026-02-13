@@ -71,7 +71,7 @@ body {
     width: 300px;
     background: linear-gradient(to bottom, rgba(30, 2, 60, 0.98), rgba(46, 16, 101, 0.98));
     backdrop-filter: blur(25px);
-    z-index: 1000;
+    z-index: 3000;
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     transform: translateX(-100%);
     transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -89,7 +89,7 @@ body {
     position: fixed;
     top: 1rem;
     left: 1rem;
-    z-index: 1000;
+    z-index: 3000;
     background: rgba(46, 16, 101, 0.4);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -160,13 +160,18 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 0.8rem;
-    /* Reduced gap */
     max-width: 550px;
     padding: 1.5rem;
-    /* Reduced padding */
     position: relative;
     transform: scale(0.95);
-    /* Slight overall scale down for compactness */
+    transition: padding 0.3s ease;
+}
+
+@media (min-width: 769px) {
+    .start-content {
+        padding-top: 6rem;
+        /* Clear the floating Dim Sum Tray */
+    }
 }
 
 /* Music Toggle Re-integrated */
@@ -553,12 +558,29 @@ body {
     filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5));
 }
 
+.game-logo .logo-top {
+    font-size: 0.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1;
+}
+
+.game-logo .logo-main {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #fbbf24;
+    line-height: 1;
+}
+
 /* Shift scoreboard if needed (it is on right, but keep HUD balanced) */
 /* .sidebar.open~.content-area .feud-scoreboard {
     right: 2rem;
 } */
 /* Removed as scoreboard is now in flow */
 
+/* content-area is flex column */
 .content-area {
     flex: 1;
     display: flex;
@@ -566,8 +588,487 @@ body {
     height: 100%;
     width: 100%;
     overflow: hidden;
-    /* Prevent scroll */
+    position: relative;
 }
+
+/* -------------------------------------------------------------------------- */
+/* NEW SINGLE VIEW ARENA                                                      */
+/* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/* NEW SPLIT VIEW ARENA                                                      */
+/* -------------------------------------------------------------------------- */
+
+.game-arena {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Mobile Default: Stack */
+    align-items: center;
+    justify-content: flex-start;
+    padding: 1rem;
+    gap: 1rem;
+    position: relative;
+    z-index: 10;
+    overflow: hidden;
+    /* Prevent body scroll */
+}
+
+/* Desktop Split Layout */
+@media (min-width: 768px) {
+    .game-arena {
+        flex-direction: row;
+        /* Side by side */
+        align-items: stretch;
+        /* Fill height */
+        padding: 2rem;
+        gap: 2rem;
+    }
+}
+
+/* 1. Active Stage (Large, Centered) */
+/* 1. Active Stage (Left Side) */
+.active-stage {
+    width: 100%;
+    /* Mobile: Full width */
+    height: 50vh;
+    /* Mobile: Half screen */
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+    z-index: 20;
+}
+
+@media (min-width: 768px) {
+    .active-stage {
+        flex: 3;
+        /* Take 60% space */
+        height: auto;
+        /* Fill height */
+        max-width: none;
+    }
+}
+
+.empty-stage-msg {
+    font-size: 2rem;
+    color: rgba(255, 255, 255, 0.3);
+    font-weight: 900;
+    text-transform: uppercase;
+    animation: pulse 2s infinite;
+}
+
+/* 2. Completed Gallery (Right Side - Vertical Grid) */
+.completed-gallery {
+    width: 100%;
+    /* Mobile: Full width */
+    height: auto;
+
+    /* Grid Layout */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    /* Wider columns */
+    grid-auto-rows: min-content;
+    gap: 0.8rem;
+    padding: 1rem;
+
+    overflow-y: auto;
+    /* Vertical scroll */
+
+    /* Tablecloth Look */
+    background-color: #b91c1c;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.1) 2px, transparent 2px);
+    background-size: 40px 40px;
+
+    border: 4px solid #7f1d1d;
+    border-radius: 12px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 768px) {
+    .completed-gallery {
+        flex: 2;
+        /* Take 40% space */
+        height: auto;
+        /* Fill height */
+        margin-top: 0;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        /* Tighter cols */
+    }
+}
+
+/* Small "Menu Items" in Gallery */
+.completed-gallery .answer-card {
+    width: 100%;
+    /* Fill grid cell */
+    height: auto;
+    aspect-ratio: auto;
+    /* Remove square constraint */
+    min-width: 0;
+    min-height: 0;
+
+    border-radius: 12px;
+    /* Slightly tighter rounding */
+    border: 1px solid #e5e7eb;
+    /* Thinner border */
+    border-bottom-width: 3px;
+    /* Tactile feel */
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 0.75rem 0.5rem;
+    /* Reduced padding */
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: left;
+    padding-left: 1rem;
+
+    transform: none !important;
+    opacity: 1 !important;
+    animation: pop-in-plate 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes pop-in-plate {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Text adjustments for menu items */
+.completed-gallery .answer-row.chinese {
+    font-size: 1.6rem;
+    /* Smaller Chinese */
+    color: #b91c1c;
+    text-shadow: none;
+    line-height: 1.1;
+    margin-bottom: 2px;
+}
+
+.completed-gallery .answer-row.pinyin {
+    display: block;
+    /* SHOW Pinyin prominently in gallery */
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #4b5563;
+    margin-bottom: 2px;
+}
+
+.completed-gallery .answer-row.english {
+    display: block;
+    font-size: 0.7rem;
+    /* Smaller English */
+    color: #6b7280;
+    margin-top: 2px;
+    line-height: 1;
+}
+
+/* Hide user feedback in gallery to keep it pinyin-only */
+.completed-gallery .user-feedback-container {
+    display: none !important;
+}
+
+/* Scrollbar styling for the table */
+.completed-gallery::-webkit-scrollbar {
+    height: 8px;
+}
+
+.completed-gallery::-webkit-scrollbar-track {
+    background: #7f1d1d;
+}
+
+.completed-gallery::-webkit-scrollbar-thumb {
+    background: #fca5a5;
+    border-radius: 4px;
+}
+
+/* Compact Metrics for Menu Items */
+.card-score-compact {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    width: 100%;
+}
+
+.main-score-circle {
+    width: 28px;
+    height: 28px;
+    background: #b91c1c;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.metrics-grid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.metric-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 6px;
+}
+
+.metric-label {
+    font-size: 0.5rem;
+    font-weight: 800;
+    color: #9ca3af;
+    width: 8px;
+    text-align: center;
+}
+
+.metric-bar-bg {
+    flex: 1;
+    height: 100%;
+    background: #f3f4f6;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.metric-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease-out;
+}
+
+/* User Feedback (Spoken Tokens - Phonetic version) */
+.user-feedback-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+/* Subdued Phonetic Pinyin on Active Card */
+.active-stage .user-feedback-container {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(251, 191, 36, 0.3);
+    width: 80%;
+    opacity: 0.7;
+}
+
+.active-stage .feedback-token {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.active-stage .feedback-token .u-char {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fca5a5;
+}
+
+.active-stage .feedback-token .u-pinyin {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
+}
+
+/* Hide user feedback in gallery to keep it pinyin-only as requested */
+.completed-gallery .user-feedback-container {
+    display: none !important;
+}
+
+/* Active Stage Card Typography Styles */
+.active-stage .answer-card {
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: left;
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        inset 0 0 80px rgba(0, 0, 0, 0.2);
+    border: 4px solid #fbbf24;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    height: 100%;
+}
+
+.active-stage .answer-row.chinese {
+    font-size: clamp(3rem, 10vw, 6rem);
+    color: white;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.active-stage .answer-row.pinyin {
+    display: block !important;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    color: #fbbf24;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.active-stage .answer-row.english {
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    color: #cbd5e1;
+}
+
+/* Base Answer Card (Shared hidden state) */
+.answer-card {
+    position: relative;
+    transform: rotateX(90deg);
+    transform-origin: center;
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.answer-card.visible-answer,
+.answer-card.active,
+.completed-gallery .answer-card {
+    transform: rotateX(0deg);
+    opacity: 1;
+}
+
+/* Bouncy Pop In Animation */
+@keyframes pop-in-bouncy {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+
+
+.completed-gallery .answer-card .text-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+/* Let's keep them if space permits, or hover to reveal? */
+.completed-gallery .answer-card:hover {
+    transform: translateY(-5px) !important;
+    z-index: 50;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    border-color: #fcd34d;
+}
+
+/* TYPOGRAPHY & TEXT STYLES for CARDS */
+.answer-row {
+    line-height: 1.2;
+    text-align: left;
+}
+
+/* 1. Chinese Characters (The Hero) */
+.answer-row.chinese {
+    font-family: var(--font-traditional);
+    color: #fbbf24;
+    /* Gold Text */
+    font-weight: 400;
+    /* Ma Shan Zheng is naturally bold/calligraphic */
+    margin-bottom: 0.2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+    /* Strong drop shadow */
+}
+
+/* Active Stage Logic */
+.active-stage .answer-card .answer-row.chinese {
+    font-size: 6rem;
+    /* HUGE and visible */
+    background: linear-gradient(to bottom, #fcd34d, #d97706);
+    /* Gold Gradient */
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
+    margin-bottom: 1rem;
+}
+
+/* 2. Pinyin (The Guide) */
+.answer-row.pinyin {
+    font-family: 'Outfit', sans-serif;
+    color: #fef3c7;
+    /* Pale Gold / Off-white */
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: none;
+    /* Hidden by default, shown via overrides */
+}
+
+/* 3. English (The Meaning) */
+.answer-row.english {
+    font-family: 'Nunito', sans-serif;
+    color: #ffd700;
+    /* Bright Gold */
+    font-size: 1.4rem;
+    /* BIGGER */
+    font-weight: 800;
+    /* BOLDER */
+    margin-top: 0.4rem;
+    font-style: normal;
+    /* Remove italic for readability */
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Sub-styles for gallery items are already handled in the Gallery block (line 670+) */
+
+.completed-gallery .answer-card .answer-row.english {
+    display: block;
+    /* Show English! */
+    font-size: 0.85rem;
+    color: #ffd700;
+    line-height: 1.1;
+    white-space: normal;
+    /* Allow wrap */
+    font-weight: 700;
+}
+
+/* Ensure Gallery Items override generic styles appropriately */
+.completed-gallery .answer-card .answer-row.chinese {
+    font-size: 2rem;
+    color: #991b1b;
+    /* Specific Red for completed items 'stamp' look */
+    background: none;
+    -webkit-text-fill-color: #991b1b;
+    text-shadow: none;
+    filter: none;
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 /* HEADER AREA (Floating HUD style)                                          */
@@ -743,6 +1244,71 @@ body {
 /* Replaced by .avatar-container.host-mode at bottom right */
 /* Keeping SVG Anim styles */
 
+/* Cute Hover for Active Card */
+.active-stage .answer-card:hover {
+    transform: scale(1.02) rotate(1deg);
+    cursor: pointer;
+    box-shadow:
+        0 25px 60px rgba(251, 191, 36, 0.4),
+        0 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+/* Success Animation - Popping */
+.answer-card.completed {
+    animation: success-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-color: #34d399;
+}
+
+@keyframes success-pop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15) rotate(-2deg);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Sparkles / Confetti (Pseudo-elements) */
+.answer-card.completed::before,
+.answer-card.completed::after {
+    content: '✨';
+    position: absolute;
+    font-size: 2rem;
+    opacity: 0;
+    pointer-events: none;
+    animation: sparkle-fade 1s ease-out forwards;
+}
+
+.answer-card.completed::before {
+    top: -20px;
+    left: -20px;
+    animation-delay: 0.1s;
+}
+
+.answer-card.completed::after {
+    bottom: -20px;
+    right: -20px;
+    animation-delay: 0.2s;
+}
+
+@keyframes sparkle-fade {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 0;
+    }
+}
+
 .avatar-container {
     position: absolute;
     bottom: 0px;
@@ -795,9 +1361,74 @@ body {
     z-index: 100;
 }
 
+
 .avatar-bubble.visible {
     opacity: 1;
     transform: translateY(0) scale(1);
+}
+
+/* User Feedback Token Styling */
+.user-feedback-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    justify-content: center;
+}
+
+.user-feedback-token {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 0.2rem 0.4rem;
+    min-width: 40px;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.user-feedback-token:nth-child(1) {
+    animation-delay: 0.0s;
+}
+
+.user-feedback-token:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.user-feedback-token:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.user-feedback-token:nth-child(4) {
+    animation-delay: 0.3s;
+}
+
+.user-feedback-token:nth-child(5) {
+    animation-delay: 0.4s;
+}
+
+.token-char {
+    font-size: 1.2rem;
+    font-family: "Noto Sans TC", sans-serif;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.token-pinyin {
+    font-size: 0.75rem;
+    color: #a78bfa;
+    font-weight: 600;
+}
+
+@keyframes popIn {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .avatar {
@@ -934,34 +1565,56 @@ body {
 }
 
 /* 3. Scoreboard (Relative Right) - Snazzy & Cute Design */
+
+.game-header {
+    width: 100%;
+    /* removed min-height */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Center align items */
+    padding: 0.5rem 1rem;
+    /* Compact padding */
+    position: relative;
+    z-index: 20;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    /* Allow wrapping on small screens */
+}
+
+/* ... (Logo styles remain) ... */
+
+/* 3. Scoreboard (Relative Right) - Snazzy & Cute Design */
 .feud-scoreboard {
     position: relative;
     right: auto;
     top: auto;
     transform: none;
     background: linear-gradient(135deg, rgba(76, 29, 149, 0.95), rgba(88, 28, 135, 0.95));
-    border: 3px solid rgba(251, 191, 36, 0.4);
-    border-radius: 20px;
-    padding: 15px 20px;
+    border: 2px solid rgba(251, 191, 36, 0.4);
+    border-radius: 16px;
+    padding: 8px 12px;
+    /* Compact padding */
     box-shadow:
         0 0 0 1px rgba(251, 191, 36, 0.2),
-        0 10px 40px rgba(0, 0, 0, 0.4),
-        inset 0 2px 10px rgba(255, 255, 255, 0.1);
-    margin-top: 10px;
+        0 4px 10px rgba(0, 0, 0, 0.4),
+        inset 0 2px 5px rgba(255, 255, 255, 0.1);
+    margin-top: 5px;
     flex-shrink: 0;
     backdrop-filter: blur(12px);
-    min-width: 220px;
+    /* min-width: 220px; Removed to allow shrinking */
 }
 
 .score-section {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    margin: 8px 0;
+    gap: 8px;
+    padding: 6px 10px;
+    margin: 4px 0;
     background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.3s ease;
 }
 
@@ -980,7 +1633,7 @@ body {
 }
 
 .score-icon {
-    font-size: 2rem;
+    font-size: 1.5rem;
     line-height: 1;
     animation: icon-bounce 2s ease-in-out infinite;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
@@ -1057,155 +1710,80 @@ body {
 /* -------------------------------------------------------------------------- */
 /* GAME BOARD (3D Grid)                                                      */
 /* -------------------------------------------------------------------------- */
-.game-board {
-    flex: 1;
+/* -------------------------------------------------------------------------- */
+/* COMPLETED GALLERY - RESPONSIVE GRID                                        */
+/* -------------------------------------------------------------------------- */
+
+.completed-gallery {
     display: grid;
-    /* Default Layout */
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-
-    gap: 1.5rem;
-    /* Slightly reduced gap */
-    padding: 1rem 320px 2rem 2rem;
-    /* Adjusted right padding for avatar/sidebar */
-
-    width: 100%;
-    height: 100%;
-    /* Force fill container */
-    margin: 0 auto;
-    align-content: stretch;
-    perspective: 1200px;
-
-    overflow: hidden;
-    /* CRITICAL: Prevent scrolling */
-
-    /* Ensure content clears command bar visually but fit in viewport */
-    padding-bottom: 120px;
-}
-
-/* Dynamic Grids based on Item Count */
-/* 1-2 Items: Big items */
-.game-board[data-card-count="1"],
-.game-board[data-card-count="2"] {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: 1fr;
-    align-items: center;
-}
-
-/* 3-4 Items: 2x2 */
-.game-board[data-card-count="3"],
-.game-board[data-card-count="4"] {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-}
-
-/* 5-6 Items: 3x2 */
-.game-board[data-card-count="5"],
-.game-board[data-card-count="6"] {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-}
-
-/* 7-8 Items: 4x2 */
-.game-board[data-card-count="7"],
-.game-board[data-card-count="8"] {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1rem;
-    /* Tighter gap */
-}
-
-/* 9-10 Items: 5x2 */
-.game-board[data-card-count="9"],
-.game-board[data-card-count="10"] {
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 0.8rem;
-}
-
-/* 11-12 Items: 4x3 */
-.game-board[data-card-count="11"],
-.game-board[data-card-count="12"] {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 0.8rem;
-}
-
-/* Very High Count Fallback */
-.game-board[data-card-count="13"],
-.game-board[data-card-count="14"],
-.game-board[data-card-count="15"],
-.game-board[data-card-count="16"] {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(4, 1fr);
-    gap: 0.5rem;
-}
-
-
-.card-slot {
-    min-height: 0;
-    /* Allow shrinking to fit! */
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-}
-
-/* Empty State Placeholder */
-.card-slot.empty {
-    border: 2px dashed rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: rgba(255, 255, 255, 0.05);
-}
-
-.answer-card {
-    position: relative;
+    padding: 1rem;
     width: 100%;
-    min-height: 100%;
+    /* Ensure it handles overflow if needed, although game-arena flex might handle it */
+    overflow-y: auto;
+    max-height: 100%;
+    /* Fill available space */
 
-    /* Cute & Soft Look */
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-    border: 3px solid #93c5fd;
-    border-bottom-width: 8px;
-    /* Chunky friendly feel */
-    border-radius: 24px;
-    /* Super rounded */
-
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem;
-    color: white;
-
-    /* Initial State: Hidden (Rotated) */
-    transform: rotateX(90deg);
-    transform-origin: center;
-    opacity: 0;
-
-    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
-    overflow: hidden;
-    /* Keep cuties inside */
+    /* Remove old scroll styles */
+    overflow-x: hidden;
+    white-space: normal;
+    background: rgba(0, 0, 0, 0.1);
+    /* Subtle container bg */
+    border-radius: 12px;
 }
 
-/* Cute Decor via Pseudo-elements */
-.answer-card::after {
+/* Custom Scrollbar for Grid */
+.completed-gallery::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.completed-gallery::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.completed-gallery::-webkit-scrollbar-thumb {
+    background: #fbbf24;
+    border-radius: 4px;
+}
+
+/* Override previous specific gallery styles if they conflict */
+.completed-gallery .answer-card {
+    /* Reset margins/widths from old horizontal style */
+    margin: 0;
+    width: 100%;
+    /* Fill grid cell */
+    min-width: 0;
+    /* Allow shrink if needed */
+    height: 100%;
+    /* Stretch to fill row height */
+    min-height: 150px;
+}
+
+/* Wood Texture Overlay? */
+/* background-image: url('data:image/svg+xml;base64,...'); Optional */
+
+
+/* Steamer Lid Handle (Visual Flourish) */
+.answer-card::before {
     content: '';
     position: absolute;
-    bottom: -5px;
-    right: 10px;
-    width: 70px;
-    height: 70px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    opacity: 0.9;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    /* handle groove */
+    border-radius: 20px;
     pointer-events: none;
-    transform: rotate(10deg);
-    transition: transform 0.3s ease;
+}
+
+/* Remove the old cutie decor for now, replace with steam? */
+.answer-card::after {
+    display: none;
 }
 
 /* Vary the cuties based on child index (simulated random) */
@@ -1235,13 +1813,17 @@ body {
 }
 
 /* State: Revealed on Board */
-.answer-card.visible-answer {
+.answer-card.visible-answer,
+.answer-card.active {
     transform: rotateX(0deg);
     opacity: 1;
 }
 
 /* State: Completed (Guessed) */
 .answer-card.completed {
+    transform: rotateX(0deg);
+    /* Ensure it stays visible */
+    opacity: 1;
     background: linear-gradient(135deg, #10b981, #059669);
     /* Soft Green */
     border-color: #6ee7b7;
@@ -1321,24 +1903,67 @@ body {
     letter-spacing: 0.04em;
 }
 
-/* Score Badge inside Card */
-.answer-score {
-    background: rgba(255, 255, 255, 0.2);
-    /* Softer glass */
-    padding: 0.6rem 1rem;
-    border-radius: 16px;
-    /* Pill shape */
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    font-family: 'Outfit', sans-serif;
-    /* Match main font */
-    font-size: 1.6rem;
-    font-weight: 900;
-    color: white;
-    min-width: 60px;
-    text-align: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    z-index: 2;
+.card-score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    /* Darker backdrop */
+    padding: 12px 16px;
+    border-radius: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    min-width: 120px;
+    /* Wider */
+    z-index: 10;
 }
+
+.main-score {
+    font-family: 'Outfit', sans-serif;
+    font-size: 3.5rem;
+    /* BIGGER */
+    font-weight: 900;
+    line-height: 0.9;
+    color: #fbbf24;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    margin-bottom: 4px;
+}
+
+.mini-chart {
+    display: flex;
+    gap: 6px;
+    /* Wider gap for clarity */
+    align-items: flex-end;
+    height: 40px;
+    /* Taller chart */
+    width: 100%;
+    justify-content: center;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mini-bar-wrapper {
+    width: 8px;
+    /* Thicker bars */
+    height: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+}
+
+.mini-bar-fill {
+    width: 100%;
+    background: #ccc;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+    /* Glow */
+}
+
 
 .split-score {
     display: flex;
@@ -1372,100 +1997,198 @@ body {
 /* -------------------------------------------------------------------------- */
 /* CONTROLS (Floating Glass Command Bar)                                     */
 /* -------------------------------------------------------------------------- */
-.interaction-zone {
-    width: 100%;
-    /* Removed padding to let bar float */
-    padding: 2rem;
-    position: absolute;
-    bottom: 0;
-    left: 0;
+/* Game Settings in Sidebar */
+.sidebar-settings {
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
     display: flex;
-    justify-content: flex-start;
-    /* Align left to avoid avatar on right */
-    padding-left: 2rem;
-    /* Add left padding */
-    background: transparent;
-    /* Remove gradient bg */
-    pointer-events: none;
-    /* Let clicks pass through outside bar */
-    z-index: 30;
-    /* Ensure command bar appears above avatar */
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: auto;
+    /* Push to bottom */
 }
 
-/* SOLID FUNCTIONAL COMMAND BAR */
-/* SOLID FUNCTIONAL COMMAND BAR */
+.settings-group h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    margin-bottom: 0.75rem;
+    padding-left: 0.5rem;
+    opacity: 0.7;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.5rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.setting-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.setting-item span {
+    color: #e2e8f0;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.voice-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 8px;
+    padding: 4px 8px;
+    max-width: 160px;
+    outline: none;
+    font-family: var(--font-family);
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.voice-select option {
+    background: #2e1065;
+    color: white;
+}
+
+/* -------------------------------------------------------------------------- */
+/* NEW FLOATING INTERACTION ZONE                                             */
+/* -------------------------------------------------------------------------- */
+.interaction-zone {
+    width: 100%;
+    padding: 0;
+    position: absolute;
+    bottom: 2rem;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Center everything */
+    justify-content: flex-end;
+    pointer-events: none;
+    /* Pass clicks through empty space */
+    z-index: 50;
+    gap: 1rem;
+}
+
+/* Container for Mic & Status (Transparent) */
 .command-bar {
     pointer-events: auto;
     display: flex;
-    /* Changed from grid to flex for better adaptability */
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    padding: 0.5rem 2rem;
-
-    /* Solid Dark Theme */
-    background: #0f172a;
-    /* Slate-900 */
-    border: 2px solid #334155;
-    /* Slate-700 */
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-    border-radius: 60px;
-
+    gap: 1rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    width: auto;
+    min-width: 0;
+    margin: 0;
     position: relative;
-    min-width: 650px;
-    /* Increased to accommodate wider toggles */
-    max-width: 850px;
-    /* Increased max width for wider toggles */
-    min-height: 90px;
-    /* Changed to min-height for flexibility */
-    margin-bottom: 20px;
-    margin-right: 280px;
-    /* Space for avatar on right */
-    transition: all 0.2s ease;
+}
+
+/* Waveform Canvas - Integrated into Bubble */
+.waveform-canvas {
+    width: 100%;
+    height: 40px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    margin-top: 0.5rem;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.waveform-canvas.hidden {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+    display: none;
+}
+
+.waveform-canvas:not(.hidden) {
+    display: block;
+    animation: waveform-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes waveform-in {
+    from {
+        opacity: 0;
+        transform: scale(0.5) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 /* Floating Subtitle */
-/* Floating Subtitle - Voice Bubble Style */
-/* Floating Subtitle - Voice Bubble Style */
 .floating-subtitle {
-    position: absolute;
-    bottom: 540px;
-    /* Safely above banquet table (which is ~310px + 210px height) */
-    right: 40px;
-    /* Keep aligned */
+    position: relative;
+    /* Stacks in flex */
+    bottom: auto;
+    right: auto;
     left: auto;
+    /* Reset absolute */
     transform: none;
 
-    font-size: 1.4rem;
-    /* Larger text */
-    font-weight: 800;
-    /* Bolder */
-    color: #4c1d95;
-    /* Deep purple */
-    text-shadow: none;
+    margin-bottom: 0.5rem;
+    /* Space above Mic */
 
-    /* Fun Comic Bubble */
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #4c1d95;
     background: #ffffff;
-    padding: 1.2rem 1.8rem;
-    border-radius: 25px 25px 4px 25px;
-    /* Quirky shape */
-    border: 4px solid #f472b6;
-    /* Pink-400 thick border */
+    padding: 1rem 1.5rem;
+    padding-bottom: 0.5rem;
+    /* Room for wave */
+    border-radius: 20px;
+    border: 3px solid #f472b6;
+
+    max-width: 80%;
+    min-width: 150px;
+    /* Ensure bubble isn't too tiny */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
     opacity: 0;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    pointer-events: none;
-    white-space: nowrap;
-    z-index: 200;
-    box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.2);
-    /* Comic style shadow */
+    transition:
+        opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+        background-color 0.4s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(244, 114, 182, 0.1);
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.9);
 }
 
-.floating-subtitle:not(:empty) {
+.floating-subtitle.has-text,
+.floating-subtitle.wave-active {
     opacity: 1;
-    transform: translateY(-10px) scale(1.05);
-    /* Slight pop */
-    animation: bubble-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: translateY(-15px) scale(1.05);
+    /* Slightly higher float */
+    /* Dynamic glow effect */
+    box-shadow: 0 15px 45px rgba(244, 114, 182, 0.2), 0 0 20px rgba(251, 191, 36, 0.1);
+    animation: bubble-float 3s ease-in-out infinite alternate;
+}
+
+@keyframes bubble-float {
+    0% {
+        transform: translateY(-15px) scale(1.05);
+    }
+
+    100% {
+        transform: translateY(-20px) scale(1.06);
+    }
 }
 
 @keyframes bubble-pop {
@@ -1551,18 +2274,18 @@ body {
 }
 
 /* Mic Button - Cute Dim Sum Style */
+/* Mic Button - Centerpiece */
 .mic-button {
-    width: 120px;
-    height: 120px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
     flex-shrink: 0;
-    /* Don't shrink */
 
     /* Cute Dim Sum Look - Enhanced Gradients */
     background: radial-gradient(circle at 30% 30%, #fffbeb 0%, #fef3c7 40%, #fbbf24 100%);
-    border: 4px solid #fef3c7;
+    border: 6px solid #fef3c7;
     border-bottom: 12px solid #d97706;
-    /* Chunky depth */
+    /* 3D depth */
 
     cursor: pointer;
     display: flex;
@@ -1570,17 +2293,12 @@ body {
     align-items: center;
     justify-content: center;
 
-    box-shadow: 0 15px 35px rgba(217, 119, 6, 0.4),
-        inset 0 2px 10px rgba(255, 255, 255, 0.8),
-        0 0 0 4px rgba(251, 191, 36, 0.2);
-
+    box-shadow: 0 20px 50px rgba(217, 119, 6, 0.6), inset 0 2px 10px rgba(255, 255, 255, 0.8), 0 0 0 4px rgba(251, 191, 36, 0.2);
     transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-    /* Flex Positioning */
     position: relative;
-    margin-top: -60px;
-    /* Pop out further */
     z-index: 100;
+    margin: 0;
 }
 
 /* When mic is hidden, adjust command bar */
@@ -1702,24 +2420,30 @@ body {
     }
 }
 
+/* Status Pill - Floating Below Mic */
 .status-container {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
-    flex-shrink: 0;
-    /* Don't shrink */
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    padding: 0.6rem 1.5rem;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    min-width: 180px;
+    transition: all 0.3s ease;
 }
 
 .status-text {
     margin: 0;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: #e2e8f0;
     text-transform: uppercase;
     letter-spacing: 1px;
-    width: 140px;
-    /* Fixed width for stability */
-    text-align: right;
+    text-align: center;
+    width: auto;
 }
 
 /* Switch Styles (keep mostly same) */
@@ -1772,6 +2496,11 @@ input:checked+.slider.slider-green {
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
+input:checked+.slider.slider-primary {
+    background-color: var(--accent-primary);
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+}
+
 input:checked+.slider:before {
     transform: translateX(20px);
     background-color: white;
@@ -1782,31 +2511,56 @@ input:checked+.slider:before {
 
 /* Mobile Responsive */
 @media (max-width: 900px) {
+
+    /* The Board (Redesigned) */
+    .game-arena {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        /* max-width: 1200px; Remove max-width to let grid handle it? */
+        margin: 0 auto;
+        flex: 1;
+        /* Fill remaining height */
+        position: relative;
+        z-index: 10;
+        /* Ensure above banquet */
+    }
+
     .game-header {
         flex-direction: column;
         height: auto;
-        padding: 2rem 1.5rem;
-        gap: 1.5rem;
+        padding: 0.5rem 1rem;
+        /* Compact padding */
+        gap: 0.5rem;
+        flex-shrink: 0;
+        /* Don't shrink, but don't take too much */
     }
 
     .game-logo {
         position: relative;
         left: auto;
         top: auto;
-        margin-bottom: 0.5rem;
-        /* Reduced margin */
+        margin-bottom: 0;
         width: 100%;
         text-align: center;
+        transform: none;
+        /* Remove rotation */
     }
 
     .logo-main {
-        font-size: 2.5rem;
-        /* Smaller for mobile */
+        font-size: 1.5rem;
+        /* Much smaller */
+        text-shadow: none;
+        /* Simplify rendering */
+    }
+
+    .logo-top {
+        font-size: 0.8rem;
     }
 
     .dimsum-decor {
-        opacity: 0.5;
-        /* Fade out decor so text reads better */
+        display: none;
+        /* Hide decor on mobile to save space */
     }
 
     .avatar-container {
@@ -1825,24 +2579,58 @@ input:checked+.slider:before {
 
     .question-display {
         max-width: 100%;
-        padding: 1.5rem;
+        padding: 0.8rem;
         margin: 0;
+        border-radius: 16px;
+    }
+
+    #question-text {
+        font-size: 1.2rem;
+        margin-bottom: 0.2rem;
+    }
+
+    #question-sub {
+        font-size: 0.9rem;
     }
 
     .feud-scoreboard {
         position: relative;
-        right: auto;
-        top: auto;
-        transform: none;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         width: 100%;
-        max-width: 400px;
-        flex-direction: row;
-        justify-content: space-between;
-        align-self: center;
-        background: rgba(0, 0, 0, 0.4);
-        padding: 1rem;
-        border-radius: 12px;
+        max-width: 100%;
+        padding: 0.5rem;
+        min-width: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        /* Grid for scores */
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .level-box {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .score-section {
+        margin: 0;
+        padding: 4px;
+        background: transparent;
+        border: none;
+    }
+
+    .score-icon {
+        font-size: 1.2rem;
+    }
+
+    .score-value {
+        font-size: 1.2rem;
+    }
+
+    .score-label {
+        font-size: 0.5rem;
     }
 
     .score-digits.total-score-display {
@@ -1857,12 +2645,34 @@ input:checked+.slider:before {
     }
 
     .game-board {
-        padding: 0 1.5rem 8rem 1.5rem;
+        padding: 0 1rem calc(8rem + env(safe-area-inset-bottom)) 1rem;
         /* Add bottom padding for command bar */
         grid-template-columns: 1fr;
         /* Single column */
-        gap: 1rem;
+        height: auto;
+        overflow: visible;
+        /* Let body scroll if needed, or containment? */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    /* Ensure Active Stage fits */
+    .active-stage {
+        min-height: auto;
+        margin-top: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .answer-card.active {
+        /* Force card to fit if possible */
+        width: auto;
+        max-width: 100%;
+        box-sizing: border-box;
+        max-height: calc(100dvh - 250px);
+        /* Header + Footer approx */
         overflow-y: auto;
+        /* Scroll inside card if content is huge */
     }
 
     .card-slot {
@@ -1870,14 +2680,36 @@ input:checked+.slider:before {
     }
 
     .interaction-zone {
-        padding: 1rem;
-        /* Tights padding */
-        justify-content: center;
-        /* Center on mobile */
-        padding-left: 1rem;
-        /* Reset left padding */
-        padding-bottom: 140px;
-        /* Space for avatar below */
+        padding: 0.5rem;
+        position: fixed;
+        /* Fix to bottom */
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+        background: linear-gradient(to top, rgba(30, 2, 60, 0.95) 0%, rgba(30, 2, 60, 0) 100%);
+        /* Fade bg */
+        z-index: 1000;
+        pointer-events: none;
+        /* Let clicks pass through top part */
+    }
+
+    .interaction-zone>* {
+        pointer-events: auto;
+    }
+
+    #next-btn-container {
+        /* Ensure Next button inside is visible */
+        position: absolute;
+        width: 100%;
+        /* Full width container interaction */
+        height: 60px;
+        top: -70px;
+        /* Position above bar */
+        right: 0;
+        display: flex;
+        justify-content: flex-end;
+        padding-right: 1rem;
     }
 
     .command-bar {
@@ -1892,7 +2724,8 @@ input:checked+.slider:before {
         grid-template-columns: 1fr auto 1fr;
         gap: 0.5rem;
         border-radius: 30px;
-        bottom: 10px;
+        border-radius: 30px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
         margin-right: 0;
         /* Reset desktop margin */
     }
@@ -1933,76 +2766,23 @@ input:checked+.slider:before {
         font-size: 1.1rem;
     }
 
-    /* FULL MOBILE OVERRIDE: Centered Mic, Sidebar Toggles */
+    /* Mobile Adjustments */
     .mic-button {
-        position: fixed !important;
-        bottom: 2rem !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 100px !important;
-        height: 100px !important;
-        border-radius: 50% !important;
-        background: radial-gradient(circle at 30% 30%, #ffd700, #b45309) !important;
-        border: 4px solid #fef3c7 !important;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 2px 20px rgba(255, 255, 255, 0.4) !important;
-        margin: 0 !important;
-        z-index: 2100 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        width: 90px;
+        height: 90px;
     }
 
-    .mic-button:after {
-        content: 'HOLD TO SPEAK' !important;
-        bottom: -30px !important;
-        font-size: 0.75rem !important;
-        opacity: 0.8 !important;
+    .status-container {
+        padding: 0.5rem 1rem;
+        min-width: 140px;
     }
 
-    .mic-icon svg {
-        width: 40px !important;
-        height: 40px !important;
-    }
-
-    .pulse-ring {
-        border-width: 4px !important;
-    }
-
-    .command-bar {
-        display: none !important;
+    .status-text {
+        font-size: 0.85rem;
     }
 
     .sidebar-settings {
-        padding: 1.5rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .sidebar-settings .left-controls {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        width: 100%;
-        background: transparent;
-        padding: 0;
-        border: none;
-        box-shadow: none;
-    }
-
-    .sidebar-settings .lang-toggle {
-        width: 100%;
-        justify-content: space-between;
-        background: rgba(255, 255, 255, 0.05);
-        padding: 0.8rem 1rem;
-        border-radius: 12px;
-        margin: 0;
-    }
-
-    .sidebar-settings #lang-label {
-        display: block;
-        font-size: 0.9rem;
+        padding: 1rem;
     }
 
     .floating-subtitle {
@@ -2028,10 +2808,6 @@ input:checked+.slider:before {
         font-size: 1.8rem;
     }
 
-    .answer-text {
-        font-size: 1.3rem;
-    }
-
     .answer-card {
         padding: 1rem;
     }
@@ -2049,7 +2825,7 @@ input:checked+.slider:before {
         width: 140px !important;
         /* Smaller on mobile */
         height: 170px !important;
-        bottom: 10px !important;
+        bottom: calc(10px + env(safe-area-inset-bottom)) !important;
         right: 50% !important;
         transform: translateX(50%) !important;
         /* Center horizontally */
@@ -2289,6 +3065,40 @@ input:checked+.slider:before {
     */
     cursor: default;
     filter: none;
+}
+
+/* Mobile Banquet Adjustment */
+@media (max-width: 900px) {
+    .banquet-area {
+        position: absolute;
+        bottom: 50%;
+        right: 50%;
+        transform: translate(50%, 50%) scale(0.6);
+        /* Center behind card? */
+        z-index: 0 !important;
+        /* Behind everything - Forced */
+        opacity: 0.2;
+        /* Very Subtle background */
+        pointer-events: none;
+        /* Non-interactive background */
+        display: flex;
+    }
+
+    .banquet-area:hover {
+        transform: translate(50%, 50%) scale(0.6);
+        /* No hover effect on mobile bg */
+        filter: none;
+    }
+
+    .banquet-area.full-mode {
+        /* When clicked (if possible via other button), full screen on top */
+        z-index: 2200;
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+        pointer-events: auto;
+        bottom: 0;
+        right: 0;
+    }
 }
 
 /* Hide overlapping elements when full mode is active (optional, but handled by z-index usually) */
@@ -2763,6 +3573,22 @@ input:checked+.slider:before {
     box-shadow: 0 15px 35px rgba(245, 158, 11, 0.5);
 }
 
+/* Mobile Next Button Overrides */
+@media (max-width: 900px) {
+    #next-round-btn {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 99px;
+        box-shadow: 0 5px 15px rgba(245, 158, 11, 0.5);
+        min-height: 44px;
+        /* Touch target */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /* NEW SIDEBAR ROUND SELECTION                                               */
 /* -------------------------------------------------------------------------- */
@@ -3226,4 +4052,68 @@ input:checked+.slider:before {
 .game-board[data-card-count="7"] .card-slot.empty,
 .game-board[data-card-count="8"] .card-slot.empty {
     font-size: 1rem;
+}
+
+/* Modal Overlay - Essential for functional modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 3000;
+    /* Higher than start screen (2000) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.modal-overlay:not(.hidden) {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #1e1b4b, #2e1065);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay:not(.hidden) .modal-content {
+    transform: scale(1);
+}
+
+.close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: white;
+}
+
+.modal-header h2 {
+    color: var(--accent-gold);
+    margin-bottom: 1rem;
 }

@@ -1,46 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 150">
-    <defs>
-        <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
-            <stop offset="50%" style="stop-color:#fbbf24;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#f97316;stop-opacity:1" />
-        </linearGradient>
-        <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-            <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-        </filter>
-    </defs>
-    
-    <!-- Decorative Circle/Sun behind -->
-    <circle cx="250" cy="75" r="70" fill="#fde68a" opacity="0.2" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Defs for gradients/filters -->
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#FFFDE7" />
+      <stop offset="90%" stop-color="#FFF8E1" />
+      <stop offset="100%" stop-color="#FFE0B2" />
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+    </filter>
+  </defs>
 
-    <!-- Steamer Basket Icon (Left) -->
-    <g transform="translate(20, 25) scale(0.8)">
-        <path d="M10,50 L90,50" stroke="#d97706" stroke-width="2" opacity="0.5"/>
-        <path d="M50,10 L50,90" stroke="#d97706" stroke-width="2" opacity="0.5"/>
-        <circle cx="50" cy="50" r="48" fill="none" stroke="#d97706" stroke-width="3"/>
-        <circle cx="50" cy="50" r="42" fill="none" stroke="#d97706" stroke-width="1" stroke-dasharray="5,5"/>
-        
-        <!-- Dumplings inside -->
-        <circle cx="35" cy="40" r="10" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-        <circle cx="65" cy="40" r="10" fill="#fff" stroke="#e2e8f0" stroke-width="1"/>
-        <circle cx="50" cy="65" r="10" fill="#fcd34d" stroke="#f59e0b" stroke-width="1"/>
-    </g>
+  <!-- Main Seal Body -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGrad)" stroke="#B71C1C" stroke-width="12"/>
+  <circle cx="256" cy="256" r="225" fill="none" stroke="#FFC107" stroke-width="6"/>
 
-    <!-- Main Text -->
-    <text x="120" y="90" font-family="'Outfit', sans-serif" font-weight="900" font-size="60" fill="url(#textGradient)" filter="url(#glow)" style="font-style: italic;">
-        Dim Sum
-    </text>
-    <text x="120" y="135" font-family="'Outfit', sans-serif" font-weight="900" font-size="40" fill="#a78bfa" letter-spacing="5">
-        MOMMA
-    </text>
+  <!-- Decorative Pattern (Classic Meander/Cloud simplified) -->
+  <path d="M 60 256 A 196 196 0 0 1 452 256" fill="none" stroke="#B71C1C" stroke-width="2" stroke-dasharray="10 10" opacity="0.3"/>
+  <path d="M 60 256 A 196 196 0 0 0 452 256" fill="none" stroke="#B71C1C" stroke-width="2" stroke-dasharray="10 10" opacity="0.3"/>
 
-    <!-- Wandering Chopsticks (Right) -->
-    <g transform="translate(420, 40) rotate(15)">
-        <rect x="0" y="0" width="80" height="6" rx="2" fill="#78350f" />
-        <rect x="0" y="15" width="80" height="6" rx="2" fill="#78350f" />
-    </g>
+  <!-- Center Graphic: Steamer Basket -->
+  <g transform="translate(136, 110) scale(1.2)">
+     <!-- Basket Back/Inside -->
+     <path d="M20,60 C20,90 180,90 180,60 C180,30 20,30 20,60" fill="#D7CCC8" stroke="#5D4037" stroke-width="2"/>
+     <path d="M20,60 L20,110 C20,140 180,140 180,110 L180,60" fill="#8D6E63" stroke="#5D4037" stroke-width="2"/>
+     
+     <!-- Inside shading -->
+     <ellipse cx="100" cy="60" rx="75" ry="25" fill="#EFEBE9"/>
+
+     <!-- Dumpling: Har Gow (Translucent Shrimp) -->
+     <path d="M60,65 Q50,50 70,45 Q90,40 100,55 Q110,40 130,45 Q150,50 140,65 Q150,80 100,85 Q50,80 60,65" fill="#FFF9C4" stroke="#FBC02D" stroke-width="1.5"/>
+     
+     <!-- Dumpling: Siu Mai (Yellow wrapper, orange roe) -->
+     <path d="M110,65 Q110,45 130,45 Q150,45 150,65 L150,75 Q150,85 130,85 Q110,85 110,75 Z" fill="#FFECB3" stroke="#F9A825" stroke-width="1.5"/>
+     <circle cx="130" cy="50" r="4" fill="#FF5722"/>
+
+     <!-- Steam wisps -->
+     <path d="M70,30 Q80,10 70,-10" stroke="#90A4AE" stroke-width="3" fill="none" opacity="0.7" stroke-linecap="round"/>
+     <path d="M100,20 Q110,0 100,-20" stroke="#90A4AE" stroke-width="3" fill="none" opacity="0.7" stroke-linecap="round"/>
+     <path d="M130,30 Q140,10 130,-10" stroke="#90A4AE" stroke-width="3" fill="none" opacity="0.7" stroke-linecap="round"/>
+  </g>
+
+  <!-- Text: Dim Sum Ma -->
+  <text x="256" y="360" font-family="serif" font-weight="bold" font-size="48" fill="#B71C1C" text-anchor="middle" letter-spacing="2" filter="url(#shadow)">DIM SUM MA</text>
+  
+  <!-- Text: Chinese -->
+  <text x="256" y="420" font-family="sans-serif" font-weight="bold" font-size="42" fill="#C62828" text-anchor="middle">點心媽</text>
+
 </svg>

@@ -48,6 +48,12 @@ function loadBanquet() {
 
         renderBanquet(data.placedItems);
 
+        // Hide static image if we have dynamic content
+        const staticImg = document.querySelector('.banquet-table-bg');
+        if (staticImg) {
+            staticImg.style.display = 'none';
+        }
+
     } catch (e) {
         console.error("Failed to load banquet:", e);
     }

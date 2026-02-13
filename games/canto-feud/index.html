@@ -20,6 +20,7 @@
 
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥟</text></svg>">
+    <link rel="stylesheet" href="../../css/global-nav.css">
 
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -182,7 +183,58 @@
                 </nav>
             </div>
             <!-- Mobile Settings - Command bar toggles move here -->
-            <div id="sidebar-settings" class="sidebar-settings"></div>
+            <div id="sidebar-settings" class="sidebar-settings">
+                <div class="settings-group">
+                    <h3>Game Settings</h3>
+                    <!-- Language Toggle -->
+                    <div class="setting-item">
+                        <span id="lang-label">Cantonese</span>
+                        <label class="switch">
+                            <input type="checkbox" id="lang-switch" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <!-- Speed Toggle -->
+                    <div class="setting-item">
+                        <span id="speed-label">Rabbit Mode 🐰</span>
+                        <label class="switch">
+                            <input type="checkbox" id="speed-switch">
+                            <span class="slider round slider-green"></span>
+                        </label>
+                    </div>
+                    <!-- Voice Selection -->
+                    <div class="setting-item">
+                        <span id="voice-label">Voice 🗣️</span>
+                        <select id="voice-select" class="voice-select">
+                            <option value="auto">Auto (Default)</option>
+                        </select>
+                    </div>
+                    <!-- Auto Answer Toggle -->
+                    <div class="setting-item">
+                        <span id="auto-answer-label">Auto Answer 🗣️</span>
+                        <label class="switch">
+                            <input type="checkbox" id="global-auto-answer">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <!-- Tiger Mom Toggle -->
+                    <div class="setting-item">
+                        <span id="tiger-label">Tiger Mom 🐯</span>
+                        <label class="switch">
+                            <input type="checkbox" id="tiger-switch">
+                            <span class="slider round slider-red"></span>
+                        </label>
+                    </div>
+                    <!-- Waveform Toggle -->
+                    <div class="setting-item">
+                        <span id="waveform-label">Show Waves 🌊</span>
+                        <label class="switch">
+                            <input type="checkbox" id="waveform-switch">
+                            <span class="slider round slider-primary"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <!-- Right Panel: Game Board -->
@@ -226,11 +278,7 @@
                     </svg>
                 </div>
 
-                <!-- 0. Game Show Logo -->
-                <div class="game-logo">
-                    <span class="logo-top">Dim Sum</span>
-                    <span class="logo-main">Canto Feud</span>
-                </div>
+
 
                 <!-- Avatar Moved to Bottom Right -->
 
@@ -266,15 +314,17 @@
                 </div>
             </div>
 
-            <!-- The Board -->
-            <div class="game-board" id="game-board">
-                <!-- Answer Cards injected here -->
-                <div class="empty-state-board">
-                    <div class="card-slot empty">1</div>
-                    <div class="card-slot empty">2</div>
-                    <div class="card-slot empty">3</div>
-                    <div class="card-slot empty">4</div>
-                    <div class="card-slot empty">5</div>
+            <!-- The Board (Redesigned) -->
+            <div class="game-arena">
+                <!-- Active Card Stage (Center) -->
+                <div id="active-stage" class="active-stage">
+                    <!-- Active Card Injected Here -->
+                    <div class="empty-stage-msg">Get Ready!</div>
+                </div>
+
+                <!-- Completed Gallery (Bottom/Side) -->
+                <div id="completed-gallery" class="completed-gallery">
+                    <!-- Completed Cards Pile Here -->
                 </div>
             </div>
 
@@ -381,8 +431,7 @@
 
                     <div class="summary-actions"
                         style="display:flex; gap:1rem; justify-content:center; margin-top: 2rem; flex-wrap: wrap;">
-                        <button id="view-history-btn" class="history-btn" onclick="showProgressHistoryList()"
-                            style="display: none;">
+                        <button id="view-history-btn" class="history-btn" style="display: none;">
                             📊 View Progress
                         </button>
                         <button id="next-round-btn" class="start-btn">
@@ -513,35 +562,15 @@
             <!-- Interaction Controls: Glass Command Bar -->
             <div class="interaction-zone">
                 <!-- Live Subtitles (Floating above bar) -->
-                <div id="live-subtitle" class="floating-subtitle"></div>
+                <div id="live-subtitle" class="floating-subtitle">
+                    <span id="live-subtitle-text"></span>
+                    <canvas id="waveform-canvas" class="waveform-canvas hidden"></canvas>
+                </div>
 
                 <div class="command-bar">
                     <!-- Language Toggle -->
-                    <div class="left-controls">
-                        <div class="lang-toggle">
-                            <span id="lang-label">Cantonese</span>
-                            <label class="switch">
-                                <input type="checkbox" id="lang-switch" checked>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        <!-- Speed Toggle -->
-                        <div class="lang-toggle speed-toggle-container">
-                            <span id="speed-label">Rabbit Mode 🐰</span>
-                            <label class="switch">
-                                <input type="checkbox" id="speed-switch">
-                                <span class="slider round slider-green"></span>
-                            </label>
-                        </div>
-                        <!-- Tiger Mom Toggle -->
-                        <div class="lang-toggle tiger-toggle-container" style="margin-left: 1rem;">
-                            <span id="tiger-label">Tiger Mom 🐯</span>
-                            <label class="switch">
-                                <input type="checkbox" id="tiger-switch">
-                                <span class="slider round slider-red"></span>
-                            </label>
-                        </div>
-                    </div>
+                    <!-- Left Controls Moved to Sidebar -->
+                    <div class="left-controls" style="display: none;"></div>
 
                     <!-- Mic Button (Center Floating) -->
                     <button id="mic-btn" class="mic-button" aria-label="Start Listening">
@@ -592,6 +621,7 @@
     </div>
 
     <script type="module" src="js/app.js"></script>
+    <script type="module" src="../../js/global-nav.js"></script>
 </body>
 
 </html>

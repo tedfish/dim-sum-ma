@@ -224,3 +224,168 @@ export function toPhoneticEnglish(pinyin) {
 
     return phonetic.join(' ');
 }
+
+/**
+ * Converts a string of Chinese characters into an array of token objects with Pinyin and Tone data.
+ * @param {string} text - The input Chinese text
+ * @returns {Array} - Array of { char, pinyin, tone } objects
+ */
+export function convertToPinyin(text) {
+    if (!text) return [];
+
+    const tokens = [];
+    const chars = text.split('');
+
+    chars.forEach(char => {
+        // Skip whitespace
+        if (!char.trim()) return;
+
+        let pinyin = charPinyinMap[char] || '';
+        let tone = 0;
+
+        if (pinyin) {
+            const toneData = getToneAndBase(pinyin);
+            tone = toneData.tone;
+        } else {
+            // Fallback for non-Chinese characters (punctuations, English, etc.)
+            pinyin = char;
+        }
+
+        tokens.push({
+            char: char,
+            pinyin: pinyin,
+            tone: tone
+        });
+    });
+
+    return tokens;
+}
+
+/**
+ * Calculates detailed grading metrics for a spoken response.
+ * @param {string} targetText - The expected correct answer (Chinese characters)
+ * @param {string} inputText - The user's spoken text (Chinese characters)
+ * @param {number} confidence - The API confidence score (0-1)
+ * @returns {object} - { 
+ *   syllableScore: number, 
+ *   toneScore: number, 
+ *   completenessScore: number, 
+ *   confidenceScore: number, 
+ *   spiritScore: number,
+ *   finalScore: number,
+ *   feedback: string 
+ * }
+ */
+export function calculateGradingMetrics(targetText, inputText, confidence = 0.8) {
+    if (!targetText || !inputText) {
+        return {
+            syllableScore: 0, toneScore: 0, completenessScore: 0,
+            confidenceScore: 0, spiritScore: 0, finalScore: 0,
+            feedback: "Silence..."
+        };
+    }
+
+    const targetTokens = convertToPinyin(targetText);
+    const inputTokens = convertToPinyin(inputText);
+
+    let syllableMatches = 0; // Correct base sound (ignoring tone)
+    let toneMatches = 0;     // Correct tone (for matched syllables)
+    let nearToneMatches = 0; // Close tone (distorted but recognizable)
+
+    // 1. Completeness (How much of the target did they say?)
+    // Simple set intersection of characters
+    const targetChars = new Set(targetTokens.map(t => t.char));
+    const inputChars = new Set(inputTokens.map(t => t.char));
+    let caughtChars = 0;
+    targetChars.forEach(c => {
+        if (inputChars.has(c)) caughtChars++;
+    });
+    const completenessScore = Math.min(100, Math.floor((caughtChars / targetChars.size) * 100));
+
+    // 2. Syllable & Tone Analysis
+    // Iterate target tokens and find best match in input
+    // This handles out-of-order or extra words gracefully
+    targetTokens.forEach(tToken => {
+        // Look for exact char match first
+        const exactMatch = inputTokens.find(iToken => iToken.char === tToken.char);
+
+        if (exactMatch) {
+            syllableMatches++;
+            if (exactMatch.tone === tToken.tone) {
+                toneMatches++;
+            } else {
+                // Check if tone is "close" (e.g. 2 vs 5 are both rising)
+                // Tone 2 (High Rising) vs Tone 5 (Low Rising)
+                // Tone 3 (Mid) vs Tone 6 (Low) - sometimes confused
+                const t = tToken.tone;
+                const i = exactMatch.tone;
+                if ((t === 2 && i === 5) || (t === 5 && i === 2) ||
+                    (t === 3 && i === 6) || (t === 6 && i === 3)) {
+                    nearToneMatches++;
+                }
+            }
+        } else {
+            // Look for homophone (same sound different char)
+            const homophone = inputTokens.find(iToken => {
+                const tBase = getToneAndBase(tToken.pinyin).base;
+                const iBase = getToneAndBase(iToken.pinyin).base;
+                return tBase === iBase;
+            });
+
+            if (homophone) {
+                syllableMatches += 0.8; // Partial credit for correct sound
+                if (homophone.tone === tToken.tone) {
+                    toneMatches += 0.5; // Partial tone credit on wrong char
+                }
+            }
+        }
+    });
+
+    const syllableScore = Math.min(100, Math.floor((syllableMatches / targetTokens.length) * 100));
+
+    // Tone score heavily penalized for wrong tones, but helped by near misses
+    let rawToneScore = (toneMatches + (nearToneMatches * 0.5)) / targetTokens.length;
+    const toneScore = Math.min(100, Math.floor(rawToneScore * 100));
+
+    // 3. Confidence (from API, normalized)
+    const confidenceScore = Math.floor(confidence * 100);
+
+    // 4. Spirit (Dim Sum Spirit / Vibe)
+    // Boost for:
+    // - Long inputs (trying hard)
+    // - High confidence
+    // - Completeness
+    // - Random "Luck" factor (Dim Sum Auntie likes you today)
+    let spiritRaw = 60 + (Math.random() * 20); // Base luck
+    if (inputText.length >= targetText.length) spiritRaw += 10; // Effort
+    if (confidence > 0.85) spiritRaw += 10; // Strong voice
+    if (completenessScore > 90) spiritRaw += 10; // Thorough
+
+    const spiritScore = Math.min(100, Math.floor(spiritRaw));
+
+    // Final Weighted Score
+    // Syllables: 30%, Tones: 40%, Completeness: 20%, Spirit: 10%
+    // Tones are most important in Cantonese!
+    const weighted = (syllableScore * 0.3) + (toneScore * 0.4) + (completenessScore * 0.2) + (spiritScore * 0.1);
+    const finalScore = Math.min(100, Math.floor(weighted));
+
+    // Generate specific feedback based on lowest metric
+    let feedback = "";
+    if (finalScore > 90) feedback = "Perfect! Inherit the family business.";
+    else if (completenessScore < 60) feedback = "Aiya, you missed half the words!";
+    else if (toneScore < 60) feedback = "Your tones are all over the place!";
+    else if (syllableScore < 70) feedback = "Pronunciation is a bit muddy.";
+    else if (spiritScore < 50) feedback = "Have you eaten? No energy!";
+    else feedback = "Good effort. Keep practicing.";
+
+    return {
+        syllableScore,
+        toneScore,
+        completenessScore,
+        confidenceScore,
+        spiritScore,
+        finalScore,
+        feedback
+    };
+}
+
