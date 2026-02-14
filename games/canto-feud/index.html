@@ -156,7 +156,7 @@
                         </svg>
                         Game Home
                     </button>
-                    <button id="view-banquet-btn" class="sidebar-btn banquet-nav-btn">
+                    <button id="view-banquet-btn" class="sidebar-btn banquet-nav-btn" style="display: none;">
                         <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <rect x="2" y="14" width="20" height="8" rx="2" />
@@ -186,14 +186,6 @@
             <div id="sidebar-settings" class="sidebar-settings">
                 <div class="settings-group">
                     <h3>Game Settings</h3>
-                    <!-- Language Toggle -->
-                    <div class="setting-item">
-                        <span id="lang-label">Cantonese</span>
-                        <label class="switch">
-                            <input type="checkbox" id="lang-switch" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
                     <!-- Speed Toggle -->
                     <div class="setting-item">
                         <span id="speed-label">Rabbit Mode 🐰</span>
@@ -328,8 +320,8 @@
                 </div>
             </div>
 
-            <!-- Banquet Area (Hidden by default, shown by toggle) -->
-            <div id="banquet-area" class="banquet-area hidden">
+            <!-- Banquet Area (Hidden - now only shown as background in gallery) -->
+            <div id="banquet-area" class="banquet-area hidden" style="display: none;">
                 <div class="banquet-table">
                     <!-- Items injected here -->
                     <div class="table-cloth"></div>

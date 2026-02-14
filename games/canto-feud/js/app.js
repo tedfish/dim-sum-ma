@@ -23,7 +23,7 @@ let dataArray = null;
 let animationId = null;
 let waveformCanvas = null;
 let waveformCtx = null;
-let waveformEnabled = false;
+let waveformEnabled = true;
 let micStream = null;
 let volumeSmoothed = 0; // For visibility smoothing
 
@@ -43,8 +43,7 @@ const liveSubtitleText = document.getElementById('live-subtitle-text');
 const avatarMouth = document.getElementById('mouth');
 const avatarBubble = document.getElementById('avatar-bubble');
 const avatarContainer = document.querySelector('.avatar-container');
-const langSwitch = document.getElementById('lang-switch');
-const langLabel = document.getElementById('lang-label');
+// Language switching removed - Cantonese only
 const manualInput = document.getElementById('manual-input');
 const voiceSelect = document.getElementById('voice-select');
 
@@ -54,7 +53,7 @@ const DIFF_DESC = document.getElementById('difficulty-desc');
 const LEVEL_DISPLAY = document.getElementById('current-level-display');
 
 // Auto Answer State
-let autoAnswerEnabled = localStorage.getItem('dimsum_auto_answer') === 'true';
+let autoAnswerEnabled = localStorage.getItem('dimsum_auto_answer') !== 'false'; // Default to true
 
 // Listen for global toggle
 window.addEventListener('auto-answer-changed', (e) => {
@@ -523,6 +522,9 @@ function renderBoard() {
     activeStage.innerHTML = '<div class="empty-stage-msg">Get Ready!</div>';
     completedGallery.innerHTML = '';
 
+    // Render banquet table as background
+    renderBanquetBackground();
+
     // Create Card Elements (Memory only first? Or append to Gallery hidden?)
     // Strategy: We will create the card elements when needed or pre-create them?
     // Let's pre-create them in memory or a hidden state to manage them easier.
@@ -540,7 +542,126 @@ function renderBoard() {
     });
 }
 
+// Render Banquet Table as Background
+function renderBanquetBackground() {
+    // Create background container
+    const bgContainer = document.createElement('div');
+    bgContainer.className = 'banquet-background';
+    bgContainer.id = 'banquet-bg';
+
+    // Create the table element
+    const table = document.createElement('div');
+    table.className = 'banquet-table';
+
+    // Add tablecloth
+    const cloth = document.createElement('div');
+    cloth.className = 'table-cloth';
+    table.appendChild(cloth);
+
+    // Render all placed items (non-interactable)
+    placedItems.forEach(entity => {
+        if (entity.type === 'basket') {
+            renderBasketBackground(table, entity);
+        } else {
+            renderLooseItemBackground(table, entity);
+        }
+    });
+
+    bgContainer.appendChild(table);
+
+    // Insert as first child of completed gallery (behind cards)
+    completedGallery.insertBefore(bgContainer, completedGallery.firstChild);
+}
+
+// Render basket in background mode (non-interactable)
+function renderBasketBackground(container, basketData) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'placed-item basket-wrapper';
+
+    // Position (scaled for background)
+    const scale = 0.8; // Slightly smaller for background
+    const left = 50 + (basketData.x * scale / 6); // Convert to percentage-based positioning
+    const top = 50 + (basketData.y * scale / 6);
+
+    wrapper.style.left = `${left}%`;
+    wrapper.style.top = `${top}%`;
+    wrapper.style.transform = `translate(-50%, -50%) rotate(${basketData.rotation}deg)`;
+
+    // Visual State
+    const itemCount = basketData.contents.length;
+    if (itemCount >= BASKET_CAPACITY) {
+        wrapper.classList.add('basket-full');
+    } else {
+        wrapper.classList.add('basket-dull');
+    }
+
+    // Render Basket SVG
+    const basketSvg = ITEM_ASSETS.basket;
+    wrapper.innerHTML = basketSvg;
+
+    // Render Contents
+    const contentContainer = document.createElement('div');
+    contentContainer.style.position = 'absolute';
+    contentContainer.style.top = '0';
+    contentContainer.style.left = '0';
+    contentContainer.style.width = '100%';
+    contentContainer.style.height = '100%';
+    contentContainer.style.pointerEvents = 'none';
+
+    basketData.contents.forEach((c, index) => {
+        const itemDef = ITEMS.find(i => i.id === c.itemId);
+        if (!itemDef) return;
+
+        const itemEl = document.createElement('div');
+        itemEl.style.position = 'absolute';
+        itemEl.style.width = '45px';
+        itemEl.style.height = '45px';
+
+        // Triforce pattern
+        let dx = 0, dy = 0;
+        const dist = 15;
+        if (index === 0) { dx = 0; dy = -dist; }
+        else if (index === 1) { dx = dist; dy = dist / 2; }
+        else if (index === 2) { dx = -dist; dy = dist / 2; }
+
+        const ix = 50 + dx - 22.5;
+        const iy = 50 + dy - 22.5;
+
+        itemEl.style.left = `${ix}%`;
+        itemEl.style.top = `${iy}%`;
+        itemEl.style.transform = `rotate(${c.rotation}deg)`;
+        itemEl.innerHTML = itemDef.asset;
+
+        contentContainer.appendChild(itemEl);
+    });
+
+    wrapper.appendChild(contentContainer);
+    container.appendChild(wrapper);
+}
+
+// Render loose item in background mode (non-interactable)
+function renderLooseItemBackground(container, itemData) {
+    const itemDef = ITEMS.find(i => i.id === itemData.itemId);
+    if (!itemDef) return;
+
+    const el = document.createElement('div');
+    el.className = 'placed-item';
+    el.innerHTML = itemDef.asset;
+
+    // Position (scaled for background)
+    const scale = 0.8;
+    const left = 50 + (itemData.x * scale / 6);
+    const top = 50 + (itemData.y * scale / 6);
+
+    el.style.left = `${left}%`;
+    el.style.top = `${top}%`;
+    el.style.transform = `translate(-50%, -50%) rotate(${itemData.rotation}deg)`;
+
+    container.appendChild(el);
+}
+
 // Logic
+
 // Logic
 let practiceTarget = null; // Currently selected card to practice
 let silenceTimer = null;
@@ -954,42 +1075,24 @@ function fail(grade, feedback) {
     }, 2000);
 }
 
-function updateLangUI() {
-    // restart recog to apply new lang
-    if (recognition) {
-        const wasListening = isListening;
-        if (isListening) stopListening();
+// Language switching removed - Cantonese only
 
-        recognition.lang = langSwitch.checked ? 'zh-HK' : 'en-US';
-        langLabel.textContent = langSwitch.checked ? 'Cantonese Mode' : 'English Mode';
-
-        if (wasListening) {
-            // slight delay to ensure stop finished
-            setTimeout(startListening, 500);
-        }
-    }
-}
-
-// Speech Recon
-// Speech Recon
+// Speech Recognition Setup
 function setupSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
-        recognition.continuous = true; // KEEP LISTENING while holding
+        recognition.continuous = true;
         recognition.interimResults = true;
-
-        const isCanto = langSwitch ? langSwitch.checked : false;
-        recognition.lang = isCanto ? 'zh-HK' : 'en-US';
+        recognition.lang = 'zh-HK'; // Cantonese (Hong Kong)
 
         recognition.onstart = () => {
             if (isListening) {
                 const btn = document.getElementById('mic-btn');
                 if (btn) btn.classList.add('listening');
 
-                const langName = recognition.lang === 'en-US' ? 'English' : 'Cantonese';
-                statusText.textContent = `Listening (${langName})...`;
+                statusText.textContent = 'Listening...';
                 statusText.style.color = '#22d3ee';
                 statusText.style.fontWeight = 'bold';
             }
@@ -2271,7 +2374,7 @@ function loadProgress() {
             speechRate = (data.speechRate !== undefined) ? data.speechRate : 1.0; // Load rate
             selectedVoiceURI = data.selectedVoiceURI || 'auto'; // Load voice
             questionHistory = data.questionHistory || {}; // Load question history
-            waveformEnabled = data.waveformEnabled || false; // Load waveform preference
+            waveformEnabled = (data.waveformEnabled !== undefined) ? data.waveformEnabled : true; // Load waveform preference, default to true
             return true;
         } catch (e) {
             console.error("Save Load Error", e);
@@ -2391,7 +2494,7 @@ function init() {
     }
 
     // UI Events
-    if (langSwitch) langSwitch.addEventListener('change', updateLangUI);
+    // Language switching removed - Cantonese only
     if (manualInput) {
         manualInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {

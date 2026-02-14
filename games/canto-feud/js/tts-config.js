@@ -10,12 +10,12 @@
 export const TTS_CONFIG = {
     useCloudTts: false, // Set to true to enable Cloud Neural TTS
     provider: 'google', // 'google' | 'elevenlabs'
-    apiKey: '', // Your API Key
+    apiKey: 'AIzaSyCVpYmviIWjD71DDXHb74vDS3HpHO7zYss', // Your API Key
 
     // Google Cloud TTS Settings
     google: {
-        voice: 'zh-HK-Wavenet-A', // Options: zh-HK-Standard-A, zh-HK-Wavenet-A, zh-HK-Neural2-A
-        languageCode: 'zh-HK'
+        voice: 'yue-HK-Standard-A', // Cantonese (Hong Kong) female voice
+        languageCode: 'yue-HK' // Cantonese language code
     },
 
     // ElevenLabs Settings

@@ -192,4 +192,55 @@ function renderLooseItem(container, itemData) {
 document.addEventListener('DOMContentLoaded', () => {
     initBackground();
     loadBanquet();
+    initFireworks();
 });
+
+// Firework System
+function initFireworks() {
+    const container = document.createElement('div');
+    container.className = 'firework-container';
+    document.body.appendChild(container);
+
+    const colors = ['gold', 'red', 'orange', 'jade'];
+
+    function createFireworkBurst() {
+        const x = Math.random() * window.innerWidth;
+        const y = Math.random() * (window.innerHeight * 0.6); // Top 60% of screen
+
+        const particleCount = 8 + Math.floor(Math.random() * 8); // 8-15 particles
+
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = `firework ${colors[Math.floor(Math.random() * colors.length)]}`;
+
+            // Random direction
+            const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+            const distance = 50 + Math.random() * 100;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+            particle.style.animationDelay = `${Math.random() * 0.5}s`;
+            particle.style.animationDuration = `${1.5 + Math.random()}s`;
+
+            container.appendChild(particle);
+
+            // Remove after animation
+            setTimeout(() => {
+                particle.remove();
+            }, 2500);
+        }
+    }
+
+    // Create bursts at random intervals (subtle - every 3-6 seconds)
+    function scheduleBurst() {
+        createFireworkBurst();
+        setTimeout(scheduleBurst, 3000 + Math.random() * 3000);
+    }
+
+    // Start after a short delay
+    setTimeout(scheduleBurst, 1000);
+}
