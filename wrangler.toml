@@ -1,5 +1,10 @@
 name = "orbital-oort"
+main = "worker.js"
 compatibility_date = "2024-04-03"
 
 [assets]
 directory = "./"
+
+# Environment variables (set via: wrangler secret put GOOGLE_CLOUD_TTS_API_KEY)
+# [vars]
+# GOOGLE_CLOUD_TTS_API_KEY will be set as a secret

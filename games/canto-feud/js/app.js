@@ -1550,7 +1550,7 @@ async function speak(text, showBubble = false, onComplete = null, useUserRate = 
     }
 
     // Cloud TTS Path
-    if (TTS_CONFIG.useCloudTts && TTS_CONFIG.apiKey) {
+    if (TTS_CONFIG.useCloudTts && TTS_CONFIG.proxyEndpoint) {
         try {
             await speakCloud(text, onComplete, useUserRate);
             return;
@@ -1609,22 +1609,19 @@ async function speak(text, showBubble = false, onComplete = null, useUserRate = 
 }
 
 /**
- * Cloud TTS implementation using Google Cloud Text-to-Speech API
+ * Cloud TTS implementation using secure Cloudflare Worker proxy
  */
 async function speakCloud(text, onComplete, useUserRate) {
     const rate = useUserRate ? speechRate : 1.0;
-    const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${TTS_CONFIG.apiKey}`;
+
+    // Use the secure proxy endpoint instead of calling Google Cloud directly
+    const url = TTS_CONFIG.proxyEndpoint;
 
     const body = {
-        input: { text: text },
-        voice: {
-            languageCode: TTS_CONFIG.google.languageCode,
-            name: TTS_CONFIG.google.voice
-        },
-        audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate: rate
-        }
+        text: text,
+        voice: TTS_CONFIG.google.voice,
+        languageCode: TTS_CONFIG.google.languageCode,
+        speakingRate: rate
     };
 
     const response = await fetch(url, {
@@ -1633,7 +1630,10 @@ async function speakCloud(text, onComplete, useUserRate) {
         body: JSON.stringify(body)
     });
 
-    if (!response.ok) throw new Error(`Google TTS API error: ${response.statusText}`);
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`TTS Proxy error: ${errorData.error || response.statusText}`);
+    }
 
     const data = await response.json();
     const audioData = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));

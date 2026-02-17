@@ -1,16 +1,16 @@
 /**
  * TTS Configuration
  * 
- * To use High-Quality Neural TTS (e.g. Google Cloud):
- * 1. Set `USE_CLOUD_TTS` to true.
- * 2. Provide a valid `API_KEY`.
- * 3. Ensure your backend or proxy handles the request if CORS is an issue.
+ * To use High-Quality Neural TTS via secure proxy:
+ * 1. Set `useCloudTts` to true.
+ * 2. Deploy the Cloudflare Worker with the API key as a secret.
+ * 3. The proxy endpoint will handle authentication securely.
  */
 
 export const TTS_CONFIG = {
     useCloudTts: false, // Set to true to enable Cloud Neural TTS
     provider: 'google', // 'google' | 'elevenlabs'
-    apiKey: 'AIzaSyCVpYmviIWjD71DDXHb74vDS3HpHO7zYss', // Your API Key
+    proxyEndpoint: '/api/tts', // Cloudflare Worker proxy endpoint
 
     // Google Cloud TTS Settings
     google: {
@@ -18,7 +18,7 @@ export const TTS_CONFIG = {
         languageCode: 'yue-HK' // Cantonese language code
     },
 
-    // ElevenLabs Settings
+    // ElevenLabs Settings (not yet implemented in proxy)
     elevenlabs: {
         voiceId: '', // You'll need a Cantonese-capable voice ID
         modelId: 'eleven_multilingual_v2'
